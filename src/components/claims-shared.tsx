@@ -6,6 +6,9 @@ import VSBar from "./VSBar";
 import StakeControl from "./StakeControl";
 import ClaimPickerModal from "./article/ClaimPickerModal";
 import { useCreateLink, useStake } from "@verisphere/protocol";
+// patch_link_ux: TxProgress + friendly error feedback for doLink
+import { fireTxProgress } from "./article/TxProgress";
+import { friendlyError } from "../utils/errorMessages";
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -259,42 +262,82 @@ export function ExpandedClaimDetail({
   }, [linkSearch, c.post_id]);
 
   const doLink = async () => {
+    // patch_link_ux: surface progress + errors via TxProgress
+    // patch_vite_link_v2: collapsed 6 steps -> 4 since the async useMetaTx
+    // flow does not surface separate "submitting" vs "waiting" events.
     if (!pick?.post_id) return;
+    const amt = parseFloat(linkStake);
+    const willStake = amt > 0;
+    const linkSteps = [
+      { label: "Confirm link in your wallet", status: "pending" as const },
+      { label: "Confirming link on chain", status: "pending" as const },
+    ];
+    const stakeSteps = willStake
+      ? [
+          { label: "Confirm initial stake in your wallet", status: "pending" as const },
+          { label: "Confirming stake on chain", status: "pending" as const },
+        ]
+      : [];
+    fireTxProgress({
+      action: "start",
+      title: willStake ? "Creating Link + Stake" : "Creating Link",
+      steps: [...linkSteps, ...stakeSteps],
+    });
     try {
       setLinking(true);
-      // Create the link (MetaMask will prompt for signature)
+      fireTxProgress({ action: "step", stepIndex: 0 });
       const [fromId, toId] = linksMode === "outgoing"
         ? [c.post_id, pick.post_id]
         : [pick.post_id, c.post_id];
+      // Once createLink starts (after the user signs in wallet), advance
+      // to "Confirming link on chain". The await blocks until the
+      // notifications watcher resolves the tx_log row.
+      fireTxProgress({ action: "step", stepIndex: 1 });
       const txHash = await createLink(fromId, toId, linkType === "challenge");
-      const amt = parseFloat(linkStake);
-      // Stake on the new link after it's indexed
-      if (amt > 0 && txHash) {
-        setTimeout(async () => {
-          try {
-            const direction = linksMode === "outgoing" ? "outgoing" : "incoming";
-            const res = await fetch(`${API}/claims/${c.post_id}/edges?direction=${direction}`).then(r => r.json());
-            const newEdges = (direction === "outgoing" ? res.outgoing : res.incoming) || [];
-            const newLink = newEdges.find((e: any) =>
-              e.claim_post_id === pick.post_id && e.is_challenge === (linkType === "challenge")
-            );
-            if (newLink?.link_post_id) {
-              // MetaMask will prompt for a second signature to stake
-              await stakeOnLink(newLink.link_post_id, "support", amt);
-            }
-          } catch (e) { console.warn("Initial link stake failed:", e); }
+
+      if (willStake && txHash) {
+        // Brief delay to let the indexer index the new link_post_id.
+        await new Promise((r) => setTimeout(r, 3000));
+        try {
+          const direction = linksMode === "outgoing" ? "outgoing" : "incoming";
+          const res = await fetch(`${API}/claims/${c.post_id}/edges?direction=${direction}`).then(r => r.json());
+          const newEdges = (direction === "outgoing" ? res.outgoing : res.incoming) || [];
+          const newLink = newEdges.find((e: any) =>
+            e.claim_post_id === pick.post_id && e.is_challenge === (linkType === "challenge")
+          );
+          if (newLink?.link_post_id) {
+            fireTxProgress({ action: "step", stepIndex: 2 });
+            fireTxProgress({ action: "step", stepIndex: 3 });
+            await stakeOnLink(newLink.link_post_id, "support", amt);
+          } else {
+            // Indexer has not caught up yet. The link itself succeeded;
+            // the user can stake manually later. Fire `done` for the link.
+          }
+        } catch (stakeErr) {
+          fireTxProgress({
+            action: "error",
+            error: "Link created, but initial stake failed: " + friendlyError(stakeErr),
+          });
           refreshEdges();
           onRefresh();
-        }, 3000);
+          setPick(null);
+          setLinkSearch("");
+          setLinkResults([]);
+          setLinking(false);
+          return;
+        }
+        refreshEdges();
+        onRefresh();
       } else {
         setTimeout(refreshEdges, 2000);
         setTimeout(onRefresh, 2000);
       }
+      fireTxProgress({ action: "done" });
       setPick(null);
       setLinkSearch("");
       setLinkResults([]);
     } catch (e) {
-      console.warn("Link creation failed:", e);
+      fireTxProgress({ action: "error", error: friendlyError(e) });
     }
     setLinking(false);
   };
