@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import VSPMarketWidget from "./components/VSPMarketWidget";
+import { NotificationsBell } from "./notifications";  // patch_bundle04b1_bell
 import ContentPanel from "./components/ContentPanel";
 import { TxProgress } from "./components/article";
 import ClaimsExplorer from "./components/ClaimsExplorer";
@@ -554,6 +555,7 @@ export default function App() {
               {navBtn("Portfolio", "portfolio", true)}
             </nav>
           </div>
+          <NotificationsBell />
           <VSPMarketWidget />
         </div>
       </header>

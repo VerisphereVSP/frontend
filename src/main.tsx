@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import App from "./App";
+import { ToastProvider } from "./components/Toast";  // patch_bundle04b1_providers
+import { NotificationsProvider } from "./notifications";
 import { BrowserRouter } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles.css";
@@ -46,7 +48,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <RainbowKitProvider>
           <BrowserRouter>
           <ErrorBoundary>
-            <App />
+            <ToastProvider>
+              <NotificationsProvider>
+                <App />
+              </NotificationsProvider>
+            </ToastProvider>
           </ErrorBoundary>
           </BrowserRouter>
         </RainbowKitProvider>
