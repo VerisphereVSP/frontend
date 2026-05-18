@@ -12,7 +12,8 @@ import {
   useEffect,
 } from "react";
 
-type ToastType = "success" | "error" | "info";
+// patch_toast_warning_fix: include "warning" — protocol hooks dispatch it
+type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastItem {
   id: number;
@@ -62,10 +63,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("verisphere:toast", handler);
   }, [toast]);
 
-  const colors = {
+  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
     success: { bg: "#059669", border: "#047857", icon: "✓" },
-    error: { bg: "#dc2626", border: "#b91c1c", icon: "✗" },
-    info: { bg: "#3b82f6", border: "#2563eb", icon: "ℹ" },
+    error:   { bg: "#dc2626", border: "#b91c1c", icon: "✗" },
+    info:    { bg: "#3b82f6", border: "#2563eb", icon: "ℹ" },
+    warning: { bg: "#d97706", border: "#b45309", icon: "⚠" },
   };
 
   return (
@@ -85,7 +87,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }}
       >
         {toasts.map((t) => {
-          const c = colors[t.type];
+          // patch_toast_warning_fix: defensive fallback if a caller dispatches
+          // an unrecognized type via the verisphere:toast event (typed any).
+          const c = colors[t.type] ?? colors.info;
           return (
             <div
               key={t.id}
