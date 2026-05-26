@@ -288,16 +288,27 @@ export default function TradeModal({
       if (denom === "usdc") {
         setAmount(usdcBalance.toFixed(2));
       } else {
-        // Use backend to calculate max VSP for available USDC
+        // patch_bundle09_p3_preview_buy_convergence: floor-round qty_vsp to 4dp so the displayed value can never
+        // exceed the qty the backend converged to. Combined with the backend's
+        // one-sided convergence (must be <= budget_truncated), this guarantees
+        // the FE's confirm-time `usdcBalance < preview.total_usdc` check passes.
+        // On backend error, surface the error and clear the input rather than
+        // falling back to a spot-price estimate that may itself trip insufficiency.
         try {
           const res = await fetch(`/api/mm/preview-buy?usdc_amount=${(Math.floor(usdcBalance * 100) / 100).toFixed(2)}`);
           if (res.ok) {
             const data = await res.json();
-            setAmount(data.qty_vsp.toFixed(4));
+            const flooredQty = Math.floor(data.qty_vsp * 1e4) / 1e4;
+            setAmount(flooredQty.toFixed(4));
           } else {
-            setAmount((usdcBalance / spotPrice).toFixed(4));
+            const errText = await res.text().catch(() => "");
+            setAmount("");
+            setError(errText || `Could not estimate max VSP (HTTP ${res.status})`);
           }
-        } catch { setAmount((usdcBalance / spotPrice).toFixed(4)); }
+        } catch (e: any) {
+          setAmount("");
+          setError(e?.message || "Could not reach backend to estimate max VSP");
+        }
       }
     } else {
       if (denom === "vsp") {

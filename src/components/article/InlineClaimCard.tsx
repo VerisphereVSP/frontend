@@ -3,14 +3,14 @@
 // Handles the Explorer-specific "create claim from sentence" flow when postId is null.
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { useCreateClaim, useStake } from "@verisphere/protocol";
+import { useCreateClaim, useStake, POST_REGISTRY_MAX_CLAIM_LENGTH } from "@verisphere/protocol";
 import { friendlyError, fireToast } from "../../utils/errorMessages";
 import { fireTxProgress } from "./TxProgress";
 import { S, ExpandedClaimDetail } from "../claims-shared";
 import StakeInput from "./StakeInput";
 import type { Sentence } from "./types";
 
-const MAX_CLAIM_LENGTH = 500;
+const MAX_CLAIM_LENGTH = Number(POST_REGISTRY_MAX_CLAIM_LENGTH);  // bundle05: synced to contract
 const API = import.meta.env.VITE_API_BASE || "/api";
 
 const triggerReindex = async (postId: number, userAddr?: string) => {

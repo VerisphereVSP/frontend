@@ -3,14 +3,15 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import VSPMarketWidget from "./components/VSPMarketWidget";
-import { NotificationsBell } from "./notifications";  // patch_bundle04b1_bell
+import TransactionsView from "./components/TransactionsView";  /* patch_bundle04_5_p3_tx_import */
+import { useNotifications } from "./notifications";  /* patch_bundle04_5_p3_tx_import */
 import ContentPanel from "./components/ContentPanel";
 import { TxProgress } from "./components/article";
 import ClaimsExplorer from "./components/ClaimsExplorer";
 import Portfolio from "./components/Portfolio";
 
 const API = import.meta.env.VITE_API_BASE || "/api";
-type View = "explore" | "claims" | "portfolio";
+type View = "explore" | "claims" | "portfolio" | "transactions";  /* patch_bundle04_5_p3_tx_nav */
 type Suggestion = { key: string; title: string; source: string };
 
 /* ── Landing Hero (shown when no topic is selected) ── */
@@ -385,16 +386,26 @@ function LandingHero({ onSubmit }: { onSubmit: (q: string) => void }) {
 /* ── Main App ── */
 export default function App() {
   const { isConnected } = useAccount();
+  const { unreadCount, markAllRead } = useNotifications();  /* patch_bundle04_5_p3_tx_nav */
   const navigate = useNavigate();
   const location = useLocation();
+  // patch_bundle04_5_p3_tx_pathname
   const view = location.pathname === "/claims" ? "claims"
     : location.pathname === "/portfolio" ? "portfolio"
+    : location.pathname === "/transactions" ? "transactions"
     : "explore";
   const setView = (v: string) => {
     if (v === "explore") navigate("/");
     else if (v === "claims") navigate("/claims");
     else if (v === "portfolio") navigate("/portfolio");
+    else if (v === "transactions") navigate("/transactions");  /* patch_bundle04_5_p3_tx_setview */
   };
+
+
+  // patch_bundle04_5_p3_tx_nav — clear unread count when entering /transactions.
+  useEffect(() => {
+    if (view === "transactions") markAllRead();
+  }, [view, markAllRead]);
   const [input, setInput] = useState("");
   const topicParam = location.pathname.startsWith("/topic/")
     ? decodeURIComponent(location.pathname.slice(7))
@@ -506,7 +517,7 @@ export default function App() {
     } else if (e.key === "Escape") setShowSugg(false);
   }
 
-  const navBtn = (label: string, target: View, requireConnect = false) => {
+  const navBtn = (label: string, target: View, requireConnect = false, badge?: number) => {  /* patch_bundle04_5_p3_tx_nav */
     if (requireConnect && !isConnected) return null;
     return (
       <button
@@ -526,6 +537,17 @@ export default function App() {
         }}
       >
         {label}
+        {badge != null && badge > 0 ? (
+          <span style={{
+            marginLeft: 6,
+            background: "#e53e3e",
+            color: "white",
+            borderRadius: 999,
+            padding: "0px 6px",
+            fontSize: 11,
+            fontWeight: 600,
+          }}>{badge > 99 ? "99+" : badge}</span>
+        ) : null}
       </button>
     );
   };
@@ -552,10 +574,11 @@ export default function App() {
             <nav style={{ display: "flex", gap: 2 }}>
               {navBtn("Explore", "explore")}
               {navBtn("Claims", "claims")}
-              {navBtn("Portfolio", "portfolio", true)}
+              {navBtn("Positions", "portfolio", true)}  {/* patch_bundle09_p1a_nav_portfolio_age_time */}
+              {isConnected && navBtn("Transactions", "transactions", true, unreadCount)}  {/* patch_bundle04_5_p3_tx_nav */}
             </nav>
           </div>
-          <NotificationsBell />
+          {/* patch_bundle04_5_p3_bell_removed — replaced by /transactions nav button */}
           <VSPMarketWidget />
         </div>
       </header>
@@ -686,9 +709,9 @@ export default function App() {
         className="watermark-bg"
         style={{
           flex: 1,
-          overflowY: (showingArticle || view === "portfolio" || view === "claims") ? "hidden" : "auto",
+          overflowY: (showingArticle || view === "portfolio" || view === "claims" || view === "transactions")  /* patch_bundle04_5_p3_tx_layout */ ? "hidden" : "auto",
           padding: "0",
-          display: (showingArticle || view === "portfolio" || view === "claims") ? "flex" : "block",
+          display: (showingArticle || view === "portfolio" || view === "claims" || view === "transactions") ? "flex" : "block",
           flexDirection: "column" as const,
           minHeight: 0,
         }}
@@ -697,7 +720,7 @@ export default function App() {
           className="container"
           style={{
             padding: showingArticle ? 0 : (view === "explore" && !topic ? 0 : "16px"),
-            ...((showingArticle || view === "portfolio" || view === "claims") ? { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" } : {}),
+            ...((showingArticle || view === "portfolio" || view === "claims" || view === "transactions") ? { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" } : {}),
           }}
         >
           {/* Landing page — when no topic */}
@@ -715,10 +738,11 @@ export default function App() {
 
           {/* Claims explorer */}
           {view === "claims" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><ClaimsExplorer /></div>}
+          {view === "transactions" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><TransactionsView /></div>}  {/* patch_bundle04_5_p3_tx_render */}
 
           {/* Portfolio */}
           {view === "portfolio" && (<div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}>
-            <Portfolio onBack={() => setView("explore")} />
+            <Portfolio />  {/* patch_bundle09_p1_page_titles_age_sort */}
           </div>)}
         </div>
       </main>

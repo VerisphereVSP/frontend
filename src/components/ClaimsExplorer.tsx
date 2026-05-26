@@ -16,7 +16,7 @@ import {
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
-type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic";
+type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic" | "created_epoch";  // patch_bundle09_p1_page_titles_age_sort
 type SortDir = "asc" | "desc";
 
 export default function ClaimsExplorer() {
@@ -160,7 +160,7 @@ export default function ClaimsExplorer() {
 
   const COLS: { key: SortKey; label: string; align?: string }[] = [
     { key: "post_id", label: "#" },
-    { key: "created_epoch" as SortKey, label: "Age" },
+    { key: "created_epoch", label: "Age" },
     { key: "text", label: "C/L" },
     { key: "text", label: "Claim / Link" },
     { key: "verity_score", label: "VS" },
@@ -177,9 +177,10 @@ export default function ClaimsExplorer() {
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column" as const, height: "100%", minHeight: 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: S.text, margin: "0 0 4px" }}>Claims Explorer</h1>
-          <p style={{ fontSize: 13, color: S.textMuted, margin: 0 }}>All on-chain claims with live metrics from the protocol</p>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
+          {/* patch_bundle04_5_p35_header */}
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: S.text, margin: 0 }}>Claims</h1>
+          <span style={{ fontSize: 13, color: S.textMuted }}>All on-chain claims with live metrics from the protocol</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={fetchClaims} style={{ background: "none", border: `1px solid ${S.border}`, borderRadius: 6, padding: "5px 12px", fontSize: 12, color: S.textMuted, cursor: "pointer" }}>
@@ -249,7 +250,6 @@ export default function ClaimsExplorer() {
             background: S.bgAlt, borderBottom: `2px solid ${S.border}`, padding: "0 16px",
           }}>
             {COLS.map((col, ci) => {
-              // ci 0=#, 1=C/L, 2=Claim/Link, 3=VS, 4=Stake, 5=Sup, 6=Chal, 7=In, 8=Out, 9=Controv
               // Columns: 0=# 1=Age 2=C/L 3=Claim 4=VS 5=Stake 6=Support 7=Challenge 8=In 9=Out 10=Controv 11=Topic
               const align =
                 ci === 0 ? "right" :       // # — right justify
@@ -266,15 +266,15 @@ export default function ClaimsExplorer() {
                 ci === 8 || ci === 9 ? "10px 10px 10px 4px" :  // In/Out right-pad
                 "10px 4px";
               return (
-                <div key={ci} onClick={() => ci > 1 ? toggleSort(col.key) : null} style={{
-                  padding: headerPad, cursor: ci > 1 ? "pointer" : "default",
+                <div key={ci} onClick={() => ci !== 0 ? toggleSort(col.key) : null} style={{
+                  padding: headerPad, cursor: ci !== 0 ? "pointer" : "default",
                   userSelect: "none" as const, whiteSpace: "nowrap" as const,
                   fontWeight: 600, fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".03em",
-                  color: sortKey === col.key && ci > 1 ? S.blue : S.textFaint,
+                  color: sortKey === col.key && ci !== 0 ? S.blue : S.textFaint,
                   textAlign: align as any,
                 }}>
                   {col.label}
-                  {sortKey === col.key && ci > 1 && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
+                  {sortKey === col.key && ci !== 0 && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
                 </div>
               );
             })}

@@ -1,14 +1,14 @@
 // frontend/src/components/article/PlusButton.tsx
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { useCreateClaim, useStake, fetchBalance } from "@verisphere/protocol";
+import { useCreateClaim, useStake, fetchBalance, POST_REGISTRY_MAX_CLAIM_LENGTH } from "@verisphere/protocol";
 import { C } from "./theme";
 import B from "./MiniButton";
 import { friendlyError, fireToast } from "../../utils/errorMessages";
 import { fireTxProgress } from "./TxProgress";
 import StakeInput from "./StakeInput";
 
-const MAX_CLAIM_LENGTH = 500;
+const MAX_CLAIM_LENGTH = Number(POST_REGISTRY_MAX_CLAIM_LENGTH);  // bundle05: synced to contract
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -335,7 +335,7 @@ export default function PlusBtn({
       ) : (
         <div>
           <textarea ref={r} value={txt} onChange={(e) => setTxt(e.target.value)}
-            placeholder="Write a factual claim to add on-chain…" maxLength={500}
+            placeholder="Write a factual claim to add on-chain…" maxLength={MAX_CLAIM_LENGTH}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); cleanup(); }
               if (e.key === "Escape") { setOpen(false); setTxt(""); }

@@ -38,12 +38,32 @@ const POLL_INTERVAL_FAST_MS = 3_000;  // while any tx is pending
 const POLL_INTERVAL_SLOW_MS = 30_000; // background
 
 const RECENT_RETAIN = 50;
+// patch_bundle04_5_p41_NP_replay_buffer: cap on the dispatched-details replay buffer.
+// Sized for a heavy session; eviction is FIFO. Correctness only needs the
+// entry to survive long enough for a waitForTxConfirmation listener to
+// attach and replay-request, typically <1s after submit.
+const REPLAY_BUFFER_CAP = 200;
+
+// patch_bundle04_5_p41_NP_replay_buffer: normalize tx_hash for consistent buffer keying.
+// Mirrors the same fn in protocol/useTxConfirmation.ts; duplicated rather
+// than imported to keep the protocol→frontend dependency uni-directional.
+function normalizeHashLocal(s: string | null | undefined): string {
+  if (!s) return "";
+  let t = s.trim().toLowerCase();
+  if (t.startsWith("0x")) t = t.slice(2);
+  return t;
+}
 const READ_CURSOR_KEY = "verisphere:notifications:read_cursor";
 
 export type TxStatus = "pending" | "confirmed" | "reverted" | "dropped";
 
+// patch_bundle04_5_p363_source_id_keying — added source + source_id from patch 2 schema.
+// id field kept for backwards compat; it is undefined for chain_tx
+// and mm_trade rows in the unified feed. Do not use it as a key.
 export interface TxRow {
-  id: number;
+  source?: "tx_log" | "chain_tx" | "mm_trade";
+  source_id: number;
+  id?: number;
   tx_hash: string;
   action_type: string;
   action_value: number | null;
@@ -116,7 +136,26 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   // Track previously-seen tx_log_ids by status, so we know when a row
   // transitions from pending → resolved and can dispatch the event.
-  const seenStatusRef = useRef<Map<number, TxStatus>>(new Map());
+  // patch_bundle04_5_p363_source_id_keying — key type widened to number | string to
+  // accommodate namespaced chain_tx and mm_trade keys.
+  const seenStatusRef = useRef<Map<number | string, TxStatus>>(new Map());
+  // patch_bundle04_5_p36_dispatch_fastpath — first poll is a snapshot, so we do not fire
+  // verisphere:tx-resolved for old already-confirmed rows on
+  // page load. From the second poll onward, transitions and
+  // first-time-seen-as-non-pending rows BOTH dispatch.
+  const hasPolledBeforeRef = useRef<boolean>(false);
+  // patch_bundle04_5_p41_NP_replay_buffer — replay buffer. The Set<string> dedup from
+  // patch 4 is upgraded to a Map<normalizedHash, detail> so we can REPLAY
+  // a previously-dispatched verisphere:tx-confirmed event to a late-attaching
+  // waitForTxConfirmation listener (covers the race where the row resolved
+  // before the listener attached).
+  //
+  // Key: normalized tx_hash (lower-case, no 0x prefix). Value: the same
+  // detail payload we dispatch.
+  //
+  // Cap: REPLAY_BUFFER_CAP entries, FIFO eviction (Map preserves insertion
+  // order). Cleared on wallet disconnect.
+  const dispatchedDetailsRef = useRef<Map<string, any>>(new Map());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressRef = useRef<string | undefined>(undefined);
   addressRef.current = address;
@@ -133,61 +172,112 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       const data = await res.json();
       const newPending: TxRow[] = data.pending || [];
       const newRecent: TxRow[] = data.recent || [];
-
       // Detect transitions: any row in seen as 'pending' that now appears
       // in `recent` with a non-pending status is newly resolved. Dispatch.
       const prev = seenStatusRef.current;
-      const newSeen = new Map<number, TxStatus>();
-      for (const row of newPending) newSeen.set(row.id, "pending");
+      // patch_bundle04_5_p363_source_id_keying
+      const newSeen = new Map<number | string, TxStatus>();
+      // patch_bundle04_5_p363_source_id_keying — row.id is undefined in the unified-feed
+      // schema; use source_id (which IS the tx_log row id for
+      // pending rows, since only tx_log emits "pending" status).
+      for (const row of newPending) newSeen.set(row.source_id, "pending");
       for (const row of newRecent) {
         const st = (row.status || "confirmed") as TxStatus;
-        newSeen.set(row.id, st);
-        const prior = prev.get(row.id);
-        if (prior === "pending") {
-          // Newly resolved.
-          window.dispatchEvent(
-            new CustomEvent("verisphere:tx-resolved", {
-              detail: {
-                tx_log_id:    row.id,
-                tx_hash:      row.tx_hash,
-                status:       st,
-                block_number: row.block_number,
-                gas_used:     row.gas_used,
-                post_id:      row.post_id,
-                error_message: row.error_message,
-              },
-            }),
-          );
-          // Surface a toast too.
-          const label = friendlyActionLabel(row.action_type);
-          if (st === "confirmed") {
+        // patch_bundle04_5_p363_source_id_keying — source-aware keys, integer for tx_log
+        // (so it matches the listener filter in useMetaTx), namespaced
+        // strings for chain_tx and mm_trade.
+        const key: number | string =
+          row.source === "tx_log" ? row.source_id
+          : `${row.source}:${row.source_id}`;
+        newSeen.set(key, st);
+        const prior = prev.get(key);
+        // patch_bundle04_5_p36_dispatch_fastpath — fire on either transition or fast-resolution
+        // first-sight, but only after the first (snapshot) poll.
+        const isResolved = st !== "pending";
+        const newlyResolved =
+          hasPolledBeforeRef.current &&
+          (prior === "pending" || (prior === undefined && isResolved));
+        if (newlyResolved) {
+          // patch_bundle04_5_p4_NP_dispatch_by_hash: dispatch by tx_hash,
+          // un-gated from source. tx_log row source_id IS the tx_log_id
+          // (preserved for backwards-compat consumers); for chain_tx and
+          // mm_trade source rows tx_log_id is left undefined.
+          // patch_bundle04_5_p41_NP_replay_buffer: Map-based dedup + replay buffer.
+          const txh = normalizeHashLocal(row.tx_hash);
+          const alreadyDispatched = txh && dispatchedDetailsRef.current.has(txh);
+          if (txh && !alreadyDispatched) {
+            // Build the detail we will dispatch AND cache.
+            const replayDetail = {
+              tx_hash:       row.tx_hash,
+              status:        st,
+              block_number:  row.block_number,
+              gas_used:      row.gas_used,
+              post_id:       row.post_id,
+              error_message: row.error_message,
+              tx_log_id:     row.source === "tx_log" ? row.source_id : undefined,
+            };
+            // Cache before dispatch so a synchronous listener that re-enters
+            // (unlikely but defensive) sees a consistent buffer state.
+            dispatchedDetailsRef.current.set(txh, replayDetail);
+            // FIFO eviction.
+            if (dispatchedDetailsRef.current.size > REPLAY_BUFFER_CAP) {
+              const oldest = dispatchedDetailsRef.current.keys().next().value;
+              if (oldest !== undefined) dispatchedDetailsRef.current.delete(oldest);
+            }
+            // New primitive: keyed by tx_hash. The protocol package's
+            // waitForTxConfirmation subscribes to this event.
             window.dispatchEvent(
-              new CustomEvent("verisphere:toast", {
+              new CustomEvent("verisphere:tx-confirmed", { detail: replayDetail }),
+            );
+            // Existing event: kept for TransactionsView's refresh trigger.
+            // Un-gated from source so MM trades and chain-only events also
+            // refresh the view. Backward-compatible payload shape.
+            window.dispatchEvent(
+              new CustomEvent("verisphere:tx-resolved", {
                 detail: {
-                  message: `${label} confirmed`,
-                  type: "success",
+                  tx_log_id:    row.source === "tx_log" ? row.source_id : undefined,
+                  tx_hash:      row.tx_hash,
+                  status:       st,
+                  block_number: row.block_number,
+                  gas_used:     row.gas_used,
+                  post_id:      row.post_id,
+                  error_message: row.error_message,
+                  source:       row.source,
                 },
               }),
             );
-          } else if (st === "reverted") {
-            window.dispatchEvent(
-              new CustomEvent("verisphere:toast", {
-                detail: {
-                  message: `${label} reverted` + (row.error_message ? `: ${row.error_message}` : ""),
-                  type: "error",
-                },
-              }),
-            );
-          } else if (st === "dropped") {
-            window.dispatchEvent(
-              new CustomEvent("verisphere:toast", {
-                detail: { message: `${label} dropped from mempool`, type: "error" },
-              }),
-            );
+            // Surface a toast too.
+            const label = friendlyActionLabel(row.action_type);
+            if (st === "confirmed") {
+              window.dispatchEvent(
+                new CustomEvent("verisphere:toast", {
+                  detail: {
+                    message: `${label} confirmed`,
+                    type: "success",
+                  },
+                }),
+              );
+            } else if (st === "reverted") {
+              window.dispatchEvent(
+                new CustomEvent("verisphere:toast", {
+                  detail: {
+                    message: `${label} reverted` + (row.error_message ? `: ${row.error_message}` : ""),
+                    type: "error",
+                  },
+                }),
+              );
+            } else if (st === "dropped") {
+              window.dispatchEvent(
+                new CustomEvent("verisphere:toast", {
+                  detail: { message: `${label} dropped from mempool`, type: "error" },
+                }),
+              );
+            }
           }
         }
       }
       seenStatusRef.current = newSeen;
+      hasPolledBeforeRef.current = true;  // patch_bundle04_5_p36_dispatch_fastpath
 
       setPending(newPending);
       setRecent(newRecent);
@@ -230,6 +320,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     if (!address) {
       if (timerRef.current) clearTimeout(timerRef.current);
       seenStatusRef.current = new Map();
+      // patch_bundle04_5_p41_NP_replay_buffer: clear per-wallet dispatch+replay buffer.
+      dispatchedDetailsRef.current = new Map();
       setPending([]);
       setRecent([]);
       setUnreadCount(0);
@@ -253,6 +345,28 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return () =>
       window.removeEventListener("verisphere:notifications-refresh", handler);
   }, [poll, schedule]);
+
+  // patch_bundle04_5_p41_NP_replay_buffer: replay-request listener.
+  // A waitForTxConfirmation listener that attaches AFTER the dispatch
+  // for its hash already fired would otherwise time out. On a replay
+  // request, re-dispatch the cached detail for that hash if we have one.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { tx_hash?: string } | undefined;
+      const key = normalizeHashLocal(detail?.tx_hash);
+      if (!key) return;
+      const cached = dispatchedDetailsRef.current.get(key);
+      if (!cached) return;
+      // Re-dispatch synchronously. The requesting listener is on the
+      // bus by definition (it just dispatched the request).
+      window.dispatchEvent(
+        new CustomEvent("verisphere:tx-confirmed", { detail: cached }),
+      );
+    };
+    window.addEventListener("verisphere:tx-confirmed-replay-request", handler);
+    return () =>
+      window.removeEventListener("verisphere:tx-confirmed-replay-request", handler);
+  }, []);
 
   const markAllRead = useCallback(() => {
     writeCursor(Date.now());

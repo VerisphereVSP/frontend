@@ -65,11 +65,8 @@ type Filter = "all" | "winning" | "losing" | "claims" | "links";
 type SortKey = "post_id" | "created_epoch" | "text" | "verity_score" | "pool_total" | "pool_support" | "pool_challenge" | "user_total" | "position_status" | "estimated_apr" | "topic";
 type SortDir = "asc" | "desc";
 
-interface PortfolioProps {
-  onBack?: () => void;
-}
 
-export default function Portfolio({ onBack }: PortfolioProps) {
+export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
   const { address: connectedAddress, isConnected } = useAccount();
   const [subjectAddress, setSubjectAddress] = useState<string>("");
   const [addressInput, setAddressInput] = useState<string>("");
@@ -219,29 +216,30 @@ export default function Portfolio({ onBack }: PortfolioProps) {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, padding: "16px 24px", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {onBack && (
-          <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: S.textMuted }}>←</button>
-        )}
-        <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: 22, color: S.text }}>Portfolio</h1>
-          <input
-            value={addressInput}
-            onChange={e => setAddressInput(e.target.value)}
-            onBlur={handleAddressBlur}
-            onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-            style={{
-              fontSize: 11, color: S.textMuted, border: "none", background: "transparent",
-              padding: "2px 0", fontFamily: "monospace", width: 360, outline: "none",
-              borderBottom: `1px dashed ${S.border}`,
-            }}
-            placeholder="0x..."
-          />
+      {/* Header — patch_bundle04_5_p35_header */}
+      <div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: 22, color: S.text }}>Positions</h1>
+            <span style={{ fontSize: 13, color: S.textMuted }}>Your stake positions and their performance</span>
+          </div>
+          <button onClick={loadPortfolio} style={{
+            padding: "6px 12px", borderRadius: 5, border: `1px solid ${S.border}`,
+            background: "#fff", fontSize: 12, cursor: "pointer", color: S.textMuted,
+          }}>⟲ Refresh</button>
         </div>
-        <button onClick={loadPortfolio} style={{
-          padding: "6px 12px", borderRadius: 5, border: `1px solid ${S.border}`,
-          background: "#fff", fontSize: 12, cursor: "pointer", color: S.textMuted,
-        }}>⟲ Refresh</button>
+        <input
+          value={addressInput}
+          onChange={e => setAddressInput(e.target.value)}
+          onBlur={handleAddressBlur}
+          onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          style={{
+            marginTop: 4, fontSize: 11, color: S.textMuted, border: "none", background: "transparent",
+            padding: "2px 0", fontFamily: "monospace", width: 480, outline: "none",
+            borderBottom: `1px dashed ${S.border}`,
+          }}
+          placeholder="0x..."
+        />
       </div>
 
       {summary && (
@@ -293,14 +291,14 @@ export default function Portfolio({ onBack }: PortfolioProps) {
             {COLS.map((col, ci) => {
               const padRight = col.padRight ?? 4;
               const padLeft = col.padLeft ?? 4;
-              const isActive = sortKey === col.key && ci > 2;  // # and C/L non-sortable
+              const isActive = sortKey === col.key && (ci !== 0 && ci !== 2);  // patch_bundle09_p1a_nav_portfolio_age_time: # and C/L non-sortable; Age sortable
               return (
                 <div key={ci}
-                  onClick={() => ci > 2 && toggleSort(col.key)}
+                  onClick={() => (ci !== 0 && ci !== 2) && toggleSort(col.key)}
                   style={{
                     padding: `10px ${padRight}px 10px ${padLeft}px`,
                     textAlign: col.align,
-                    cursor: ci > 2 ? "pointer" : "default",
+                    cursor: (ci !== 0 && ci !== 2) ? "pointer" : "default",
                     color: isActive ? S.blue : S.textMuted,
                     userSelect: "none" as const,
                   }}>
@@ -469,11 +467,11 @@ export default function Portfolio({ onBack }: PortfolioProps) {
   );
 }
 
-function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function StatBox({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {  // patch_bundle09_p2_portfolio_statbox_style
   return (
-    <div style={{ padding: "12px 16px", border: `1px solid ${S.border}`, borderRadius: 6, background: "#fff" }}>
-      <div style={{ fontSize: 9, color: S.textMuted, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: color || S.text, marginTop: 2 }}>{value}</div>
+    <div style={{ padding: "10px 16px", background: S.bgAlt, borderRadius: 8, border: `1px solid ${S.border}`, minWidth: 90 }}>
+      <div style={{ fontSize: 10, color: S.textFaint, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: ".04em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 17, fontWeight: 700, color: color || S.text }}>{value}</div>
       {sub && <div style={{ fontSize: 10, color: S.textFaint, marginTop: 2 }}>{sub}</div>}
     </div>
   );
