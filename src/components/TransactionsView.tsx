@@ -47,6 +47,12 @@ type RecentRow = {
   is_link_post?: boolean | null;
   link_from_text?: string | null;
   link_to_text?: string | null;
+  // patch_link_polarity_in_snippet: link's own polarity (challenge vs support).
+  // Distinct from is_challenge, which for a stake-on-link row is
+  // the STAKER's stance, not the link's. rowSnippet picks the verb
+  // from this so the narration describes the link regardless of
+  // how someone is staking on it.
+  link_is_challenge?: boolean | null;
 };
 
 type Resp = {
@@ -104,7 +110,9 @@ function fmtAction(r: RecentRow): string {
   switch (r.action_type) {
     case "claim":         return "Create claim";
     case "link":          return r.is_challenge ? "Create challenge link" : "Create support link";
-    case "stake":         return r.is_challenge ? `Challenge ${target}` : `Support ${target}`;
+    // patch_Q_stake_on_claim_and_relabel: rename to disambiguate from "Create challenge link"
+    // / "Create support link" creation labels in the same view.
+    case "stake":         return r.is_challenge ? `Stake challenge on ${target}` : `Stake support on ${target}`;
     case "unstake":       return `Withdraw from ${target}`;
     case "buy":           return "Buy VSP";
     case "sell":          return "Sell VSP";
@@ -191,7 +199,10 @@ function rowSnippet(r: RecentRow): string | null {
   if (r.is_link_post && (r.link_from_text || r.link_to_text)) {
     const f = r.link_from_text ? `"${r.link_from_text}"` : "?";
     const t = r.link_to_text ? `"${r.link_to_text}"` : "?";
-    const verb = r.is_challenge ? "challenges" : "supports";
+    // patch_link_polarity_in_snippet: use the LINK's polarity, not the row's. For a
+    // stake-on-link, r.is_challenge is the staker's stance; the
+    // narration must describe the link itself.
+    const verb = r.link_is_challenge ? "challenges" : "supports";
     return `${f} ${verb} ${t}`;
   }
   return r.claim_snippet ?? null;

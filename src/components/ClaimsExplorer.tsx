@@ -47,6 +47,15 @@ export default function ClaimsExplorer() {
 
   useEffect(() => { fetchClaims(); }, [fetchClaims]);
 
+  // patch_bundle09_csp_and_refresh_claims: refresh on tx-resolved (G-42).
+  // See Portfolio.tsx for the design rationale. Claims data lives
+  // in indexer-backed tables, so tx-resolved is the right trigger.
+  useEffect(() => {
+    const handler = () => { fetchClaims(); };
+    window.addEventListener("verisphere:tx-resolved", handler);
+    return () => window.removeEventListener("verisphere:tx-resolved", handler);
+  }, [fetchClaims]);
+
   const dedupClaims = useMemo(() => {
     // Dedup by post_id
     const seen = new Map<number, Claim>();

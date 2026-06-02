@@ -123,6 +123,21 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
 
   useEffect(() => { loadPortfolio(); }, [loadPortfolio]);
 
+  // patch_bundle09_csp_and_refresh_portfolio: refresh on tx-resolved (G-42).
+  // Listens for the indexer-confirmation signal fired by
+  // NotificationsProvider after a relayed action's tx is mined and
+  // its event payload indexed. Pattern matches TransactionsView's
+  // tx-resolved listener. Portfolio reads from indexer-backed
+  // tables (chain_user_stake, etc.), so the right trigger is
+  // tx-resolved (DB is fresh), not the synchronous data-changed
+  // (which fires before the indexer has processed the event).
+  useEffect(() => {
+    if (!subjectAddress) return;
+    const handler = () => { loadPortfolio(); };
+    window.addEventListener("verisphere:tx-resolved", handler);
+    return () => window.removeEventListener("verisphere:tx-resolved", handler);
+  }, [subjectAddress, loadPortfolio]);
+
   const handleAddressBlur = () => {
     const trimmed = addressInput.trim();
     if (!trimmed) {
