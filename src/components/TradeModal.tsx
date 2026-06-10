@@ -228,9 +228,19 @@ export default function TradeModal({
       // ── Step 2: Send trade request with permit ──
       setStatus("Executing trade…");
 
-      const slippageBuffer = side === "buy" ? 1.01 : 0.99;
-      const previewUsdc = preview.total_usdc ?? preview.gross_usdc ?? preview.net_usdc ?? 0;
-      const maxTotalUsdc = previewUsdc * slippageBuffer;
+      // patch_g34_fe_buy_allin_sell_net: buy cap is all-in (gross+fee) with a
+      // 1% slippage buffer; sell floor is on NET proceeds (what the user
+      // receives, == the "you receive" figure) with a 1% buffer. The two
+      // endpoints now take differently-named fields: buy max_total_usdc, sell
+      // min_total_usdc.
+      let tradeLimit: Record<string, number>;
+      if (side === "buy") {
+        const allInUsdc = preview.total_usdc ?? 0;
+        tradeLimit = { max_total_usdc: allInUsdc * 1.01 };
+      } else {
+        const netUsdc = preview.net_usdc ?? 0;
+        tradeLimit = { min_total_usdc: netUsdc * 0.99 };
+      }
 
       const endpoint = side === "buy" ? "/api/mm/buy" : "/api/mm/sell";
       const res = await fetch(endpoint, {
@@ -239,7 +249,7 @@ export default function TradeModal({
         body: JSON.stringify({
           user_address: walletAddress,
           qty_vsp: preview.qty_vsp,
-          max_total_usdc: maxTotalUsdc,
+          ...tradeLimit,
           permit: {
             deadline,
             v,

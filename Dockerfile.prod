@@ -1,0 +1,66 @@
+# frontend/Dockerfile.prod — production frontend.           marker: patch_prod_compose
+#
+# Stage 1 protocol-builder : build @verisphere/protocol dist (same as dev).
+# Stage 2 frontend-builder : `vite build` with VITE_* baked in at BUILD time.
+#                            FAILS LOUD if VITE_WALLETCONNECT_PROJECT_ID is empty
+#                            or the dead 'fallback-local-id' sentinel — the prod
+#                            analogue of the smoke-harness wiring check (Vite
+#                            inlines import.meta.env at build time, so this is the
+#                            only place to catch a broken projectId before it ships).
+# Stage 3 caddy            : serve the static dist + reverse-proxy /api + TLS + CSP.
+
+# -- Stage 1: protocol -------------------------------------------------------
+FROM node:20-slim AS protocol-builder
+WORKDIR /protocol
+COPY core/out ../core/out
+COPY protocol/package*.json ./
+RUN npm install
+COPY protocol/src ./src
+COPY protocol/script ./script
+COPY protocol/tsconfig.json ./
+RUN npm run build
+
+# -- Stage 2: static SPA build -----------------------------------------------
+FROM node:20-slim AS frontend-builder
+WORKDIR /frontend
+COPY --from=protocol-builder /protocol /protocol
+ENV PROTOCOL_PATH=/protocol
+COPY frontend/package*.json ./
+RUN npm install --legacy-peer-deps
+COPY frontend/ .
+
+# VITE_* are baked into the static bundle (NOT runtime env in prod).
+ARG VITE_API_BASE=/api
+ARG VITE_CHAIN_ENV
+ARG VITE_MM_ADDRESS
+ARG VITE_WALLETCONNECT_PROJECT_ID
+
+# Loud build-time wiring assertions (prod equivalent of vsp-smoke's checks).
+RUN set -e; \
+    if [ -z "$VITE_WALLETCONNECT_PROJECT_ID" ] || [ "$VITE_WALLETCONNECT_PROJECT_ID" = "fallback-local-id" ]; then \
+      echo "FATAL(prod build): VITE_WALLETCONNECT_PROJECT_ID is empty or the 'fallback-local-id' sentinel." >&2; \
+      echo "  Pass it from the resolved env at build time, e.g.:" >&2; \
+      echo "    docker compose --env-file /dev/shm/vsp-resolved.env -f docker-compose.prod.yml build caddy" >&2; \
+      exit 1; \
+    fi; \
+    if [ -z "$VITE_CHAIN_ENV" ]; then \
+      echo "FATAL(prod build): VITE_CHAIN_ENV is empty (code would default to 'fuji' — a mainnet footgun)." >&2; exit 1; \
+    fi; \
+    if [ -z "$VITE_MM_ADDRESS" ]; then \
+      echo "FATAL(prod build): VITE_MM_ADDRESS is empty." >&2; exit 1; \
+    fi
+
+ENV VITE_API_BASE=$VITE_API_BASE \
+    VITE_CHAIN_ENV=$VITE_CHAIN_ENV \
+    VITE_MM_ADDRESS=$VITE_MM_ADDRESS \
+    VITE_WALLETCONNECT_PROJECT_ID=$VITE_WALLETCONNECT_PROJECT_ID
+RUN npm run build
+# NOTE: VITE_USDC_ADDRESS is intentionally NOT a build arg — tokenAddresses.ts has
+# a safe hardwired per-chain default (Fuji 0x5425..Bc65 / mainnet 0xB97E..a6E).
+
+# -- Stage 3: Caddy edge -----------------------------------------------------
+FROM caddy:2-alpine
+COPY --from=frontend-builder /frontend/dist /srv
+COPY ops/caddy/Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443
+# caddy:2-alpine default entrypoint: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
