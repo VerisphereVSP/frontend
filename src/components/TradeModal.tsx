@@ -1,7 +1,7 @@
 // frontend/src/components/TradeModal.tsx
 import { fireToast, friendlyError } from "../utils/errorMessages";
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useWalletClient } from "wagmi";
+import { useAccount, useBalance, useWalletClient, usePublicClient } from "wagmi";
 
 type MMQuote = {
   mid_price_usd: number;
@@ -36,6 +36,52 @@ const PERMIT_TYPES = {
   ],
 } as const;
 
+// patch_permit_domain_contract_read: read the EIP-712 permit (name, version)
+// straight from the token's eip712Domain() (EIP-5267) so the signed domain always
+// matches the deployed token -- no hardcoded casing to drift across a redeploy.
+// Cached per token address. Read-or-throw: never sign a guessed domain (a wrong
+// name silently fails permit verification, not theft).
+const EIP712_DOMAIN_ABI = [
+  {
+    type: "function",
+    name: "eip712Domain",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "fields", type: "bytes1" },
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+      { name: "salt", type: "bytes32" },
+      { name: "extensions", type: "uint256[]" },
+    ],
+  },
+] as const;
+const permitDomainCache = new Map<string, { name: string; version: string }>();
+async function readPermitDomain(
+  publicClient: any,
+  token: `0x${string}`,
+): Promise<{ name: string; version: string }> {
+  const key = token.toLowerCase();
+  const hit = permitDomainCache.get(key);
+  if (hit) return hit;
+  if (!publicClient) throw new Error("No RPC client available to read permit domain");
+  const d: any = await publicClient.readContract({
+    address: token,
+    abi: EIP712_DOMAIN_ABI,
+    functionName: "eip712Domain",
+  });
+  const name = d[1] as string;
+  const version = d[2] as string;
+  if (!name || !version) {
+    throw new Error("eip712Domain() returned empty name/version; refusing to sign a guessed permit domain");
+  }
+  const val = { name, version };
+  permitDomainCache.set(key, val);
+  return val;
+}
+
 export default function TradeModal({
   side,
   quote,
@@ -55,6 +101,7 @@ export default function TradeModal({
 }) {
   const { chain, isConnected, address } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const [amount, setAmount] = useState("");
   const [denom, setDenom] = useState<"vsp" | "usdc">("vsp");
   const [loading, setLoading] = useState(false);
@@ -167,8 +214,18 @@ export default function TradeModal({
     try {
       // ── Step 1: Sign EIP-2612 permit ──
       const tokenAddress = side === "buy" ? usdcAddress : vspAddress;
-      const tokenName = side === "buy" ? "USD Coin" : "VeriSphere";
-      const tokenVersion = side === "buy" ? "2" : "1";
+      // VSP permit domain is read from the contract (eip712Domain, EIP-5267) so it
+      // always matches the deployed token; USDC stays hardcoded (external token).
+      let tokenName: string;
+      let tokenVersion: string;
+      if (side === "buy") {
+        tokenName = "USD Coin";
+        tokenVersion = "2";
+      } else {
+        const dom = await readPermitDomain(publicClient, vspAddress);
+        tokenName = dom.name;
+        tokenVersion = dom.version;
+      }
       const tokenKey = side === "buy" ? "usdc" : "vsp";
 
       // Calculate permit value with buffer

@@ -327,6 +327,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setUnreadCount(0);
       return;
     }
+    // patch_NP_account_switch_snapshot: on ANY wallet change (including A->B,
+    // not just disconnect) reset the per-wallet dispatch state so the new
+    // wallet's first poll is a fresh snapshot and does NOT replay its
+    // already-confirmed history as toasts. Without this, hasPolledBeforeRef
+    // stays true across a switch, so every confirmed row satisfies
+    // (prior === undefined && isResolved) and re-fires a toast.
+    seenStatusRef.current = new Map();
+    hasPolledBeforeRef.current = false;
+    dispatchedDetailsRef.current = new Map();
     // Immediate first poll.
     poll();
     schedule(POLL_INTERVAL_SLOW_MS);
