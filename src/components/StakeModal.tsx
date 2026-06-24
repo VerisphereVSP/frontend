@@ -1,7 +1,7 @@
 // frontend/src/components/StakeModal.tsx
 import { useState } from "react";
 import { useAccount, useBalance } from "wagmi";
-import { FUJI_ADDRESSES } from "@verisphere/protocol";
+import { getAddresses } from "@verisphere/protocol";
 
 type StakeModalProps = {
   claimId: number;
@@ -20,7 +20,7 @@ export default function StakeModal({
   onStake,
   onUnstake,
 }: StakeModalProps) {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function StakeModal({
   // VSP wallet balance
   const { data: vspBalanceData } = useBalance({
     address,
-    token: FUJI_ADDRESSES.VSPToken as `0x${string}`,
+    token: getAddresses(chain?.id ?? 43113).VSPToken as `0x${string}`,
     query: { enabled: Boolean(isConnected && address) },
   });
 
