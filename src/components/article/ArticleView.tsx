@@ -264,7 +264,32 @@ export default function ArticleView({
     const seenPid = globalSeenPid || new Set<number>();
     const seenText = globalSeenText || new Set<string>();
 
+    // GROUP-FIRST rollup: collapse dupe groups to their canonical BEFORE
+    // assigning lanes, so a group is placed as one unit by its AGGREGATE
+    // stake/VS (not scattered across lanes by per-member status).
+    const groupSeen = new Set<any>();
+    const collapsed: Sentence[] = [];
     for (const s of sec.sentences) {
+      const gid = (s as any).dupe_group_id;
+      const count = (s as any).dupe_count || 1;
+      if (gid && count > 1) {
+        // Only the canonical represents the group; skip non-canonicals.
+        const canon = (s as any).dupe_canonical_post_id;
+        if (canon != null && s.post_id != null && s.post_id !== canon) continue;
+        if (groupSeen.has(gid)) continue;
+        groupSeen.add(gid);
+        // Represent the group with the canonical sentence but AGGREGATE metrics.
+        const rep: any = { ...s };
+        rep.stake_support = (s as any).dupe_agg_support ?? s.stake_support;
+        rep.stake_challenge = (s as any).dupe_agg_challenge ?? s.stake_challenge;
+        rep.verity_score = (s as any).dupe_agg_vs ?? s.verity_score;
+        collapsed.push(rep as Sentence);
+      } else {
+        collapsed.push(s);
+      }
+    }
+
+    for (const s of collapsed) {
       const key = s.text.toLowerCase().trim();
       const isDup =
         (s.post_id != null && seenPid.has(s.post_id)) || seenText.has(key);
@@ -272,12 +297,14 @@ export default function ArticleView({
       seenText.add(key);
       if (isDup) continue;
 
-      // On-chain claims with no stakes at all → hide completely
+      // On-chain claims (or collapsed groups) with no stakes at all → hide.
+      // For a rolled-up group these are the AGGREGATE metrics, so a whole
+      // group that is unstaked+VS0 hides, exactly like a lone unstaked claim.
       if (s.post_id != null) {
         const totalStake = n(s.stake_support) + n(s.stake_challenge);
-        if (totalStake < 0.001 && n(s.verity_score) === 0) continue;  // Unstaked with no VS — disappear
+        if (totalStake < 0.001 && n(s.verity_score) === 0) continue;  // Unstaked, no VS — disappear
         if (n(s.verity_score) <= 0) {
-          disputed.push(s);  // Staked but losing → disputed
+          disputed.push(s);  // Aggregate losing → disputed (rollup applies here too)
           continue;
         }
       }
@@ -302,21 +329,8 @@ export default function ArticleView({
     }
     const cleanNarrative = narrative.filter((_, i) => !toRemove.has(i));
 
-    // Rollup: group on-chain claims by dupe_group, show only master
-    {
-      const groupSeen = new Set();
-      const keep = [];
-      for (const s of cleanNarrative) {
-        const gid = (s as any).dupe_group_id;
-        const count = (s as any).dupe_count || 1;
-        if (!gid || count <= 1) { keep.push(s); continue; }
-        if (groupSeen.has(gid)) continue;
-        groupSeen.add(gid);
-        keep.push(s);
-      }
-      cleanNarrative.length = 0;
-      cleanNarrative.push(...keep);
-    }
+    // (Dupe-group rollup already applied group-first, before lane
+    // assignment, so both narrative and disputed lanes are rolled up.)
 
     const narPids = new Set(
       cleanNarrative.filter((s) => s.post_id != null).map((s) => s.post_id!),
@@ -523,7 +537,13 @@ export default function ArticleView({
                                   fontSize: 9, padding: "0 4px", borderRadius: 6,
                                   background: "#fef3c7", color: "#92400e", fontWeight: 700,
                                   lineHeight: "14px", cursor: "pointer",
-                                }} title={`${(s as any).dupe_count} similar claims grouped — click to see all`}>
+                                }} title={`${(s as any).dupe_count} similar claims grouped — click to view in Claims`}
+                                   onClick={(ev) => {
+                                     // dupe badge -> Claims view (sanctioned cross-view nav; reveals rolled-up member)
+                                     ev.stopPropagation();
+                                     const target = (s as any).dupe_canonical_post_id ?? s.post_id;
+                                     if (target != null) window.dispatchEvent(new CustomEvent("verisphere:navigate", { detail: { view: "claims", postId: target } }));
+                                   }}>
                                   {(s as any).dupe_count}×
                                 </span>
                               )}

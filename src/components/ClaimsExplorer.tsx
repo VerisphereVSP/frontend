@@ -202,7 +202,7 @@ export default function ClaimsExplorer() {
       {/* Stats */}
       <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
         {[
-          { label: "Claims", value: String(dedupClaims.length) },
+          { label: "Claims", value: String(filtered.filter(c => !c.is_link).length) },
           { label: "Links", value: String(Math.round(totalLinks)) },
           { label: "Total Stake", value: `${totalStake >= 1000 ? (totalStake / 1000).toFixed(1) + "K" : totalStake.toFixed(1)} VSP` },
           { label: "Avg VS", value: `${avgVS >= 0 ? "+" : ""}${avgVS.toFixed(1)}%` },
@@ -322,11 +322,13 @@ export default function ClaimsExplorer() {
                       )}
                       {c.is_link && <Badge type="link" />}
                       {!c.is_link && c.dupe_member_count && c.dupe_member_count > 1 && (
+                        /* badge click reveals + expands this group's row */
                         <span style={{
                           fontSize: 9, padding: "1px 5px", borderRadius: 8,
                           background: "#fef3c7", color: "#92400e", fontWeight: 600,
                           whiteSpace: "nowrap",
-                        }} title={`${c.dupe_member_count} similar claims grouped`}>
+                        }} title={`${c.dupe_member_count} similar claims grouped — click to view`}
+                           onClick={(ev) => { ev.stopPropagation(); handleGoTo(c.post_id); }}>
                           {c.dupe_member_count}×
                         </span>
                       )}
