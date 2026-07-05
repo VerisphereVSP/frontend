@@ -736,8 +736,23 @@ export default function ArticleView({
                             >
                               {s.text}
                               {s.post_id != null && (
-                                <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3 }}>
+                                <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3, gap: 3 }}>
                                   <VSBar vs={vs} width={40} height={12} />
+                                  {(s as any).dupe_count > 1 && (
+                                    <span style={{
+                                      fontSize: 9, padding: "0 4px", borderRadius: 6,
+                                      background: "#fef3c7", color: "#92400e", fontWeight: 700,
+                                      lineHeight: "14px", cursor: "pointer",
+                                    }} title={`${(s as any).dupe_count} similar claims grouped — click to view in Claims`}
+                                       onClick={(ev) => {
+                                         // patch_dupe_badge_disputed: same cross-view nav as the narrative lane
+                                         ev.stopPropagation();
+                                         const target = (s as any).dupe_canonical_post_id ?? s.post_id;
+                                         if (target != null) window.dispatchEvent(new CustomEvent("verisphere:navigate", { detail: { view: "claims", postId: target } }));
+                                       }}>
+                                      {(s as any).dupe_count}×
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </span>
@@ -752,6 +767,8 @@ export default function ArticleView({
                                 allSentences={allSent}
                                 onRefresh={onRefresh}
                                 onClose={collapse}
+                                dupeGroupId={(s as any).dupe_group_id}
+                                dupeCount={(s as any).dupe_count}
                               />
                             )}
                           </div>
