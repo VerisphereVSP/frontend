@@ -106,7 +106,9 @@ export default function ClaimsExplorer() {
   const filtered = useMemo(() => {
     let list = dedupClaims;
     if (!showLinks) list = list.filter(c => !c.is_link);
-    if (!showEmpty) list = list.filter(c => c.total_stake > 0 || c.is_link);
+    // patch_empty_filter_links: hide EVERY zero-staked post (claim or link);
+    // previously links were exempted (|| c.is_link) so 0-stake links stayed visible.
+    if (!showEmpty) list = list.filter(c => c.total_stake > 0);
     if (filter.trim()) {
       const q = filter.toLowerCase();
       list = list.filter(c => c.text.toLowerCase().includes(q) || String(c.post_id).includes(q));
