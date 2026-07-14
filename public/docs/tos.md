@@ -1,8 +1,13 @@
 # Terms of Service
 
 **Verisphere Ltd.**
-**Effective Date:** March 2026
+**Effective Date:** July 2026 (draft — under review)
 **Contact:** info@verisphere.co
+
+> ⚠ **DRAFT — LEGAL REVIEW REQUIRED.** This document has been reconciled with the
+> current implementation but has **not** been reviewed by counsel. The token, market
+> maker, price-floor, and reserve provisions in particular are legally load-bearing
+> and must be reviewed by a qualified crypto/securities attorney before publication.
 
 ---
 
@@ -12,7 +17,7 @@ By accessing or using the Verisphere platform ("Service"), you agree to be bound
 
 ## 2. Description of Service
 
-Verisphere provides a web-based interface for interacting with the VeriSphere truth-staking protocol, an open-source set of smart contracts deployed on the Avalanche blockchain. Through the Service, you can:
+Verisphere provides a web-based interface for interacting with the Verisphere truth-staking protocol, an open-source set of smart contracts deployed on the Avalanche blockchain. Through the Service, you can:
 
 - Browse and search factual claims
 - Create factual claims on-chain
@@ -26,7 +31,7 @@ You must be at least 18 years old to use the Service. By using the Service, you 
 
 ## 4. The Protocol vs. The Service
 
-The VeriSphere protocol is a set of open-source smart contracts on the Avalanche blockchain. The protocol is permissionless — anyone may interact with it directly using their own tools.
+The Verisphere protocol is a set of open-source smart contracts on the Avalanche blockchain. The protocol is permissionless — anyone may interact with it directly using their own tools.
 
 Verisphere Ltd. operates this Service as a convenience layer that provides gasless transactions (meta-transactions), content moderation, and a user interface. The Service is separate from the protocol. Verisphere Ltd. does not control, own, or operate the underlying blockchain or protocol contracts.
 
@@ -38,11 +43,49 @@ You are not required to use our relay. You may interact with the protocol contra
 
 ## 6. VSP Tokens
 
-VSP is a utility token used within the VeriSphere protocol for staking on claims. VSP is **not** an investment, security, or financial instrument. The value of VSP may fluctuate and may go to zero. By purchasing VSP, you acknowledge that:
+VSP is a utility token used within the Verisphere protocol for staking on claims. VSP is **not** an investment, security, or financial instrument. The value of VSP may fluctuate and may go to zero. By purchasing VSP, you acknowledge that:
 
 - You may lose all tokens you stake
 - Past performance of claims or staking positions does not indicate future results
 - Verisphere Ltd. makes no guarantees about the value, liquidity, or future availability of VSP
+
+### 6.1 Market Maker, Pricing, and the Absence of a Guaranteed Floor
+
+> ⚠ **LEGAL REVIEW REQUIRED — this entire subsection.** The interaction between "the
+> Service operates a price mechanism" and "reserves are entirely discretionary" is the
+> single most sensitive point in these Terms and must be scrutinized by counsel.
+
+As a convenience, the Service **may** (but is under no obligation to) operate a
+market maker that quotes prices at which the Service will buy VSP from, or sell VSP
+to, users for another asset (e.g., a stablecoin). Any such market maker, and the
+prices it quotes, are features of **the Service**, not of the protocol. The protocol
+does not set, guarantee, or defend any price for VSP.
+
+You acknowledge and agree that:
+
+- **There is no guaranteed price floor.** Any price the Service quotes — including
+  any apparent minimum or "floor" price — is **not guaranteed**, may change at any
+  time without notice, and may fall to zero. Any pricing mechanism is discretionary
+  and may be modified, suspended, or discontinued at any time.
+- **Buy/sell availability is not guaranteed.** The Service may halt, limit, or
+  refuse to quote, buy, or sell at any time, for any reason, including insufficient
+  liquidity. Sells in particular may be unavailable when the Service's available
+  balance is low.
+- **Reserves are wholly discretionary.** To the extent the Service holds any assets
+  as reserves associated with VSP or its pricing, **the existence, amount,
+  sufficiency, custody, and continuation of any such reserves are entirely at the
+  sole discretion of Verisphere Ltd.** Verisphere Ltd. makes **no representation,
+  warranty, or guarantee** that any reserve exists, will continue to exist, is or
+  will be sufficient to support any price, or is or will be available to you.
+  Verisphere Ltd. may add to, draw down, relocate, or eliminate any reserve at any
+  time without notice and is under **no obligation** to use any asset to support the
+  price of, or to repurchase, VSP.
+- **Total loss is possible.** VSP may become worthless and/or impossible to sell.
+  You may lose the entire value of any VSP you acquire.
+
+Nothing in this section, and nothing about any pricing mechanism or reserve, shall
+be construed as a promise, guarantee, or obligation by Verisphere Ltd. to maintain
+any price, to maintain any reserve, or to repurchase VSP.
 
 ## 7. Staking Risks
 
@@ -77,7 +120,7 @@ The blockchain itself is unmoderated. Content created by users interacting direc
 
 ## 10. Intellectual Property
 
-The VeriSphere protocol contracts are open-source software licensed under the MIT License. The Verisphere relay and forwarder contract are licensed under the Business Source License 1.1 (BUSL-1.1).
+The Verisphere protocol contracts are open-source software licensed under the MIT License. The Verisphere relay and forwarder contract are licensed under the Business Source License 1.1 (BUSL-1.1).
 
 Claims created by users are user-generated content. Verisphere Ltd. does not claim ownership of user-created claims.
 
