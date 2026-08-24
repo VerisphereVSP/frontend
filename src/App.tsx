@@ -2,7 +2,7 @@
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "wagmi";
-import VSPMarketWidget from "./components/VSPMarketWidget";
+import MarketWidget from "./components/MarketWidget"; // patch_trackb_fe_swap: routes pool vs legacy MM surface
 import TransactionsView from "./components/TransactionsView";  /* patch_bundle04_5_p3_tx_import */
 import { useNotifications } from "./notifications";  /* patch_bundle04_5_p3_tx_import */
 import ContentPanel from "./components/ContentPanel";
@@ -579,7 +579,7 @@ export default function App() {
             </nav>
           </div>
           {/* patch_bundle04_5_p3_bell_removed — replaced by /transactions nav button */}
-          <VSPMarketWidget />
+          <MarketWidget />
         </div>
       </header>
 
