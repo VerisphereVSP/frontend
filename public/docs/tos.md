@@ -9,8 +9,8 @@
 > (Delaware corporation as operator) and the launch architecture: trading on a public
 > permissionless AMM — the Company operates no market maker, quotes no prices, and
 > custodies no user funds — with the token supply created in a single genesis mint
-> and partially locked under an on-chain vesting schedule. Prepared following attorney consultations but not reviewed as a whole by
-> retained counsel; bracketed items must be completed, and the restricted-jurisdictions
+> to the Corporation's treasury. DRAFT prepared without counsel; not reviewed by an
+> attorney. Bracketed items must be completed, and the restricted-jurisdictions
 > list finalized, before publication. Supersedes the v1 draft in its entirety.
 
 ---
