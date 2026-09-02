@@ -8,7 +8,7 @@ Verisphere is a technology company building economic infrastructure for factual 
 
 **The VeriSphere Protocol** is an open-source, permissionless set of smart contracts on the Avalanche blockchain. Anyone can publish a factual claim, stake tokens to support or challenge it, and link claims together as evidence. The protocol computes a Verity Score for every claim based on the economic weight behind it.
 
-**The Verisphere Platform** (this website) is a service operated by Verisphere Ltd. that makes the protocol accessible: gasless transactions so you don't need crypto experience, AI-generated articles that organize claims by topic, and a moderated interface that enforces community standards.
+**The Verisphere Platform** (this website) is a service operated by Verisphere Corp., a Delaware corporation, that makes the protocol accessible: gasless transactions so you don't need crypto experience, AI-generated articles that organize claims by topic, and a moderated interface that enforces community standards.
 
 ## How It Works
 
@@ -19,14 +19,14 @@ Verisphere is a technology company building economic infrastructure for factual 
 
 ## The Team
 
-Verisphere was founded in 2025 with the mission of making factual accountability economically rational. We are a small team of engineers, economists, and protocol designers based remotely.
+The Verisphere project began in 2025 with the mission of making factual accountability economically rational; Verisphere Corp. was formed in 2026 to operate the platform. We are a small, independent engineering team, working remotely.
 
 ## Open Source
 
-The VeriSphere protocol is fully open-source under the MIT License. Anyone can inspect the contracts, deploy their own instance, or build alternative interfaces. The protocol does not depend on Verisphere Ltd. to function.
+The VeriSphere protocol is fully open-source under the MIT License. Anyone can inspect the contracts, deploy their own instance, or build alternative interfaces. The protocol does not depend on Verisphere Corp. to function.
 
-- **Protocol contracts:** [github.com/VeriSphereVSP/core](https://github.com/VeriSphereVSP/core)
-- **Documentation:** [github.com/VeriSphereVSP/docs](https://github.com/VeriSphereVSP/docs)
+- **Protocol contracts:** [github.com/VerisphereVSP/core](https://github.com/VerisphereVSP/core)
+- **Documentation:** [github.com/VerisphereVSP/docs](https://github.com/VerisphereVSP/docs)
 
 ## Contact
 
