@@ -9,8 +9,8 @@
 > (Delaware corporation as operator) and the launch architecture: trading on a public
 > permissionless AMM — the Company operates no market maker, quotes no prices, and
 > custodies no user funds — with the token supply created in a single genesis mint
-> and partially locked under an on-chain vesting schedule. Prepared following attorney consultations but not reviewed as a whole by
-> retained counsel; bracketed items must be completed, and the restricted-jurisdictions
+> to the Corporation's treasury. DRAFT prepared without counsel; not reviewed by an
+> attorney. Bracketed items must be completed, and the restricted-jurisdictions
 > list finalized, before publication. Supersedes the v1 draft in its entirety.
 
 ---
@@ -88,9 +88,10 @@ fees).
 
 **6.2 One-time supply creation; no discretionary minting.** The entire VSP supply
 (other than adjustments made by the Protocol's staking mechanics, described below)
-was created in a single mint at deployment. A portion is held subject to an on-chain
-vesting contract with a fixed, publicly verifiable release schedule. The token's
-supply cap is fixed at the genesis amount: the deployed code does not permit the
+was created in a single mint at deployment and is held by the Company's treasury.
+If the Company places any portion of treasury supply under an on-chain vesting
+contract, it will publish the release schedule. The token's supply cap is fixed at
+the genesis amount: the deployed code does not permit the
 Company — or anyone else — to mint additional tokens, and the Company holds no
 discretionary minting authority. The Protocol's StakeEngine adjusts supply only as a
 mechanical consequence of staking outcomes (symmetric, rate-bounded gains and
