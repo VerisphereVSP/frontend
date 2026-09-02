@@ -2,13 +2,21 @@
 // Public-AMM era trade surface: pool price + a Swap link supplied by the
 // backend (swap_url). Replaces the MM buy/sell surface once the pool is live.
 import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { probePool, PoolState } from "../api/pool";
+import PoolTradeModal from "./PoolTradeModal";
 
 const REFRESH_MS = 30_000;
 
 export default function PoolMarketWidget({ initial }: { initial: PoolState | null }) {
   const [state, setState] = useState<PoolState | null>(initial);
   const [unavailable, setUnavailable] = useState(initial === null);
+  const [side, setSide] = useState<"buy" | "sell" | null>(null);
+  const { isConnected } = useAccount();
+  const refreshNow = async () => {
+    const probe = await probePool();
+    if (probe.kind === "pool") { setState(probe.state); setUnavailable(false); }
+  };
 
   useEffect(() => {
     const t = setInterval(async () => {
@@ -54,22 +62,43 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             {Math.round(state.usdc_reserve ?? 0).toLocaleString()} USDC
           </span>
         )}
-        {swapUrl ? (
-          <a
-            href={swapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: "6px 14px", borderRadius: 8, background: "#4f46e5",
-              color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
-            }}
-          >
-            Swap
-          </a>
+        {state?.pair ? (
+          <>
+            <button
+              className="btn btn-primary vsp-button"
+              disabled={!isConnected || unavailable}
+              title={!isConnected ? "connect a wallet to trade" : undefined}
+              onClick={() => setSide("buy")}
+            >
+              Buy
+            </button>
+            <button
+              className="btn vsp-button"
+              disabled={!isConnected || unavailable}
+              title={!isConnected ? "connect a wallet to trade" : undefined}
+              onClick={() => setSide("sell")}
+            >
+              Sell
+            </button>
+            {swapUrl && (
+              <a href={swapUrl} target="_blank" rel="noopener noreferrer"
+                 style={{ fontSize: 11, color: "#6b7280", textDecoration: "underline" }}>
+                view pool
+              </a>
+            )}
+          </>
         ) : (
           <span style={{ fontSize: 11, color: "#6b7280" }}>Trading opens at launch</span>
         )}
       </div>
+      {side && state?.pair && (
+        <PoolTradeModal
+          side={side}
+          pair={state.pair as `0x${string}`}
+          onClose={() => setSide(null)}
+          onSwapped={refreshNow}
+        />
+      )}
     </div>
   );
 }
