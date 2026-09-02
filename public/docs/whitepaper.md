@@ -1,12 +1,12 @@
 # Verisphere: A Truth-Staking Protocol
-### White Paper — v15.0 (draft — under review)
+### White Paper — v16.0 (September 2026)
 **Date:** July 2026
 **Contact:** info@verisphere.co
 
 > **Scope.** This paper describes the Verisphere **protocol** only: the on-chain
 > smart contracts in `core/`. It does not describe, and makes no representations
 > about, any application, website, relay, market maker, pricing mechanism, or
-> token-purchase service that any party (including Verisphere Ltd.) may build on
+> token-purchase service that any party (including Verisphere Corp.) may build on
 > top of the protocol. Those are separate services governed by their own terms.
 > The protocol does not set, guarantee, or defend any market price for VSP.
 
@@ -105,7 +105,7 @@ For a lot on the side aligned with the VS sign, `delta` accrues (VSP is minted t
 
 **Position rescale.** After each snapshot's epoch math completes, the StakeEngine rescales all lots' `weightedPosition` values so that the maximum position is strictly less than `sideTotal`. This prevents the edge case where earlier stakers withdraw and shrink `sideTotal` below later stakers' positions, which would otherwise clamp those lots' `positionWeight` to zero indefinitely. The rescale preserves the relative ordering of all lots.
 
-The global reference `sMax` is maintained by a top-3 post tracker: every stake or withdrawal updates this tracker and snaps `sMax` to the leader's total. As a result, during normal operation `sMax` always equals the largest active post's total stake — there is no slow decay to remove. A fallback exponential decay (configurable; currently 10% per epoch capped at 30 epochs) only runs in the corner case where the protocol has zero active posts, so a stale `sMax` cannot stay frozen forever after a complete unwind.
+The global reference `sMax` is maintained by a tracker of the ten largest active posts. When any tracked post's total stake exceeds the current `sMax`, `sMax` rises to that total immediately. `sMax` never snaps downward: when the largest tracked total falls below it — through withdrawals or decay — `sMax` converges toward the current largest total by exponential decay (configurable; currently 10% per epoch), so the influence normalizer cannot be yanked down within a single block by a large withdrawal, and a stale peak cannot persist indefinitely either. The permissionless `refreshSMax()` entry point lets anyone advance this convergence; in production a keeper calls it on a schedule.
 
 For the full normative specification, see `claim-spec-evm-abi.md`, Appendix A.
 
@@ -253,7 +253,7 @@ This ensures:
 
 ### 5.1 VSP Token
 
-VSP is the native ERC-20 token of the protocol, deployed on Avalanche C-Chain. It has governance-controlled mint and burn functions managed through an Authority contract. VSP supports ERC-2612 permit, enabling gasless approvals.
+VSP is the native ERC-20 token of the protocol, deployed on Avalanche C-Chain. Mint and burn authority is held through an Authority contract and restricted to the protocol's StakeEngine; the token's supply cap is fixed at the genesis amount, so no party — including governance — can mint beyond it. VSP supports ERC-2612 permit, enabling gasless approvals.
 
 ### 5.2 Posting Fee
 
@@ -270,11 +270,24 @@ The posting fee serves two purposes:
 - **Equilibrium**: the balance between creation (burning) and staking (minting) is governed by protocol parameters.
 
 The mint and burn of VSP that back stake accrual and decay are performed under the
-`Authority`'s minter/burner roles. In operation, an automated off-chain process
-holds these roles and executes the periodic snapshot that mints to accruing lots and
-burns from decaying ones, according to the on-chain rules described in §3.2. The
-authority to mint and burn is governed as described in §6.2; the roles are
-revocable by governance.
+`Authority`'s minter/burner roles, which are held by the StakeEngine alone. Epoch
+settlement runs on-chain, inside ordinary protocol transactions (stakes,
+withdrawals, updates): the StakeEngine mints to accruing lots and burns from
+decaying ones according to the rules in §3.2. No off-chain process holds any
+minting authority; the only off-chain component is a keeper that periodically calls
+the permissionless `refreshSMax()`. Role assignments are governed as described in
+§6.2 and are revocable by governance.
+
+### 5.4 Supply
+
+The entire VSP supply — 1,000,000,000 VSP — was created in a single genesis mint at
+deployment and is held by the operating company's treasury. The supply cap is flat
+and equal to the genesis amount: the deployed code permits no further discretionary
+minting by anyone, including the company and governance. Thereafter, total supply
+changes only through the StakeEngine's staking mechanics — symmetric, rate-bounded
+accrual and decay — and the burning of posting fees. No portion of the treasury was
+locked at genesis; if the company places treasury supply under an on-chain vesting
+contract, it will publish the contract address and release schedule.
 
 ---
 
@@ -311,6 +324,13 @@ held by a `TimelockController` whose sole proposer and executor is a multi-signa
 days on mainnet) between the scheduling and the execution of any privileged action,
 and the timelock admin role is renounced at deployment, so there is no deployer
 backdoor and no unilateral fast path.
+
+Alongside governance, a separate **guardian** role (held by a dedicated
+multi-signature Safe) can pause the protocol's entry points — new stakes and new
+claims — in an emergency. The guardian cannot mint, cannot move funds, and cannot
+unpause: withdrawals and position updates remain open during a pause so users can
+always exit, and only governance, through the timelock, can lift a pause. Token
+transfers are not pausable by anyone.
 
 **Governance handoff is part of deployment, not an optional later step.** The
 deployment procedure deploys the timelock, then transfers ownership of every

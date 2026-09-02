@@ -1,19 +1,9 @@
 # Terms of Service
 
-**[COMPANY NAME], Inc.**, a Delaware corporation ("Company," "we," "us")
-**Version:** 2.0 (draft)
-**Effective Date:** [DATE — set to mainnet genesis]
+**Verisphere Corp.**, a Delaware corporation ("Company," "we," "us")
+**Version:** 2.1
+**Effective Date:** September 1, 2026
 **Contact:** info@verisphere.co
-
-> ⚠ **DRAFT — NOT YET IN EFFECT.** Version 2.0 reflects the corporate structure
-> (Delaware corporation as operator) and the launch architecture: trading on a public
-> permissionless AMM — the Company operates no market maker, quotes no prices, and
-> custodies no user funds — with the token supply created in a single genesis mint
-> to the Corporation's treasury. DRAFT prepared without counsel; not reviewed by an
-> attorney. Bracketed items must be completed, and the restricted-jurisdictions
-> list finalized, before publication. Supersedes the v1 draft in its entirety.
-
----
 
 ## 1. Acceptance of Terms
 
@@ -41,10 +31,12 @@ from using the Service under any applicable law.
 
 The Service (or portions of it) is not offered to, and may not be used by, persons
 located in, resident in, or organized under the laws of jurisdictions on the
-Company's restricted list, which the Company may update from time to time and which
-is published at [URL]. [RESTRICTED-JURISDICTIONS LIST — PENDING FINALIZATION;
-expected to include, at minimum, jurisdictions subject to comprehensive
-sanctions.] You are responsible for compliance
+Company's restricted list, which the Company may update from time to time by
+revising this Section. The restricted list is: Cuba, Iran, North Korea, Syria, and
+the Crimea, Donetsk, and Luhansk regions of Ukraine, together with any other
+jurisdiction subject to comprehensive United States sanctions; and, in every
+jurisdiction, any person named on the U.S. Treasury OFAC Specially Designated
+Nationals list or otherwise blocked under U.S. sanctions. You are responsible for compliance
 with the laws of your own jurisdiction, and you represent that your use of the
 Service is lawful where you are.
 
@@ -116,8 +108,9 @@ obligation to maintain any price or liquidity for, or to repurchase, VSP.
   prices at any moment may not be realizable.
 - Past performance of claims, staking positions, or the token does not indicate
   future results.
-- The Protocol's smart contracts have **not been audited by a third party** as of the
-  effective date; they may contain defects that result in loss of funds.
+- The Protocol's smart contracts have undergone a **limited-scope independent
+  security review** (staking engine, August 2026) but **no comprehensive audit** as
+  of the effective date; they may contain defects that result in loss of funds.
 
 ## 7. Staking Risks
 
@@ -203,8 +196,6 @@ These Terms are governed by the laws of the State of Delaware, United States, wi
 regard to conflict-of-law principles. Any dispute arising out of or relating to these
 Terms or the Service shall be brought exclusively in the state or federal courts
 located in the State of Delaware, and you consent to their personal jurisdiction.
-[COUNSEL DECISION: whether to substitute binding arbitration with class-action
-waiver; not included in this draft.]
 
 ## 16. General
 
