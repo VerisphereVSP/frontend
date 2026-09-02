@@ -1,14 +1,11 @@
-// frontend/src/components/PoolTradeModal.tsx — patch_pool_trade
-// Non-custodial Buy/Sell against the public pool (MockCPAMM on Fuji).
-//
-// This reroutes the legacy Buy/Sell UX to the pool: the user's OWN wallet
-// approves the pool and calls swap(); the company is never counterparty,
-// quotes nothing, and custodies nothing. Quotes are computed from LIVE
-// on-chain reserves (not the 30s-stale API price) with the contract's exact
-// x*y=k fee math (997/1000), and minOut enforces a 1% slippage bound.
-//
-// VENUE ADAPTER NOTE: this speaks MockCPAMM's interface. The mainnet venue is
-// a real AMM (Schedule 1) and will need its own adapter — checklist item.
+// frontend/src/components/PoolTradeModal.tsx — patch_pool_trade (restyle r2)
+// Non-custodial Buy/Sell against the public pool, wearing the LEGACY TradeModal
+// shell verbatim (founder direction 2026-09-02): same overlay/content classes,
+// header, chain + balance lines, denomination toggle + Max, grey preview box
+// with ruled total, two-step Preview Fill -> Cancel/Confirm, footer note.
+// Execution: approve + MockCPAMM.swap from the USER'S OWN wallet. Quotes from
+// live on-chain reserves with the contract's exact 997/1000 math; minOut at 1%.
+// VENUE ADAPTER: speaks MockCPAMM; mainnet AMM needs its own (checklist #34).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
@@ -22,15 +19,13 @@ const POOL_ABI = [
   { type: "function", name: "reserve0", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "reserve1", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   {
-    type: "function",
-    name: "swap",
+    type: "function", name: "swap",
     inputs: [
       { name: "zeroForOne", type: "bool" },
       { name: "amountIn", type: "uint256" },
       { name: "minOut", type: "uint256" },
     ],
-    outputs: [{ name: "amountOut", type: "uint256" }],
-    stateMutability: "nonpayable",
+    outputs: [{ name: "amountOut", type: "uint256" }], stateMutability: "nonpayable",
   },
 ] as const;
 
@@ -41,19 +36,31 @@ const ERC20_ABI = [
 ] as const;
 
 type Side = "buy" | "sell";
+type Denom = "vsp" | "usdc";
 
-// Mirrors MockCPAMM.swap exactly: out = resOut*in*997 / (resIn*1000 + in*997)
+// out for a given in — mirrors MockCPAMM.swap exactly (997/1000 fee)
 function quoteOut(amountIn: bigint, resIn: bigint, resOut: bigint): bigint {
   if (amountIn === 0n || resIn === 0n || resOut === 0n) return 0n;
-  const inWithFee = amountIn * 997n;
-  return (resOut * inWithFee) / (resIn * 1000n + inWithFee);
+  const f = amountIn * 997n;
+  return (resOut * f) / (resIn * 1000n + f);
+}
+// in required for a desired out (exact-out inverse, rounded up)
+function quoteIn(amountOut: bigint, resIn: bigint, resOut: bigint): bigint {
+  if (amountOut === 0n || resIn === 0n || amountOut >= resOut) return 0n;
+  return (resIn * amountOut * 1000n) / ((resOut - amountOut) * 997n) + 1n;
 }
 
+type Preview = {
+  amountIn: bigint;      // in-token units
+  amountOut: bigint;     // out-token units
+  minOut: bigint;
+  feeInToken: bigint;    // 0.3% of amountIn, in-token units
+  avgPriceUsdcPerVsp: number;
+  impactPct: number;
+};
+
 export default function PoolTradeModal({
-  side,
-  pair,
-  onClose,
-  onSwapped,
+  side, pair, onClose, onSwapped,
 }: {
   side: Side;
   pair: `0x${string}`;
@@ -64,88 +71,114 @@ export default function PoolTradeModal({
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  // buy: USDC in (6 dp) -> VSP out (18 dp); sell: VSP in -> USDC out
+  const zeroForOne = side === "sell"; // token0 = VSP
   const inDecimals = side === "buy" ? 6 : 18;
   const outDecimals = side === "buy" ? 18 : 6;
-  const zeroForOne = side === "sell"; // token0 = VSP
 
-  const [amountStr, setAmountStr] = useState("");
+  const [denom, setDenom] = useState<Denom>("vsp");
+  const [amount, setAmount] = useState("");
   const [tokens, setTokens] = useState<{ vsp: `0x${string}`; usdc: `0x${string}` } | null>(null);
   const [reserves, setReserves] = useState<{ r0: bigint; r1: bigint } | null>(null);
-  const [balance, setBalance] = useState<bigint | null>(null);
-  const [status, setStatus] = useState<string>("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [vspBalance, setVspBalance] = useState(0);
+  const [usdcBalance, setUsdcBalance] = useState(0);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!publicClient || !address) return;
+    if (!publicClient || !address) return null;
     const [t0, t1, r0, r1] = await Promise.all([
       publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "token0" }),
       publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "token1" }),
       publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve0" }),
       publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve1" }),
     ]);
-    const vsp = t0 as `0x${string}`;
-    const usdc = t1 as `0x${string}`;
+    const vsp = t0 as `0x${string}`, usdc = t1 as `0x${string}`;
+    const [vb, ub] = await Promise.all([
+      publicClient.readContract({ address: vsp, abi: ERC20_ABI, functionName: "balanceOf", args: [address] }),
+      publicClient.readContract({ address: usdc, abi: ERC20_ABI, functionName: "balanceOf", args: [address] }),
+    ]);
+    const res = { r0: r0 as bigint, r1: r1 as bigint };
     setTokens({ vsp, usdc });
-    setReserves({ r0: r0 as bigint, r1: r1 as bigint });
-    const tokenIn = side === "buy" ? usdc : vsp;
-    const bal = await publicClient.readContract({
-      address: tokenIn, abi: ERC20_ABI, functionName: "balanceOf", args: [address],
-    });
-    setBalance(bal as bigint);
-  }, [publicClient, address, pair, side]);
+    setReserves(res);
+    setVspBalance(Number(formatUnits(vb as bigint, 18)));
+    setUsdcBalance(Number(formatUnits(ub as bigint, 6)));
+    return res;
+  }, [publicClient, address, pair]);
 
   useEffect(() => { refresh().catch(() => setError("could not read pool state")); }, [refresh]);
 
-  const amountIn = useMemo(() => {
-    try { return amountStr ? parseUnits(amountStr as `${number}`, inDecimals) : 0n; }
-    catch { return 0n; }
-  }, [amountStr, inDecimals]);
+  const spotPrice = useMemo(() => {
+    if (!reserves || reserves.r0 === 0n) return 0;
+    return Number(formatUnits(reserves.r1, 6)) / Number(formatUnits(reserves.r0, 18));
+  }, [reserves]);
 
-  const { expectedOut, minOut, impactPct } = useMemo(() => {
-    if (!reserves || amountIn === 0n) return { expectedOut: 0n, minOut: 0n, impactPct: 0 };
-    const resIn = zeroForOne ? reserves.r0 : reserves.r1;
-    const resOut = zeroForOne ? reserves.r1 : reserves.r0;
-    const out = quoteOut(amountIn, resIn, resOut);
-    const min = (out * (10_000n - SLIPPAGE_BPS)) / 10_000n;
-    // impact vs mid-price: what you'd get at spot, ignoring depth
-    const spotOut = (amountIn * resOut) / (resIn === 0n ? 1n : resIn);
-    const impact = spotOut === 0n ? 0 : Number(((spotOut - out) * 10_000n) / spotOut) / 100;
-    return { expectedOut: out, minOut: min, impactPct: impact };
-  }, [reserves, amountIn, zeroForOne]);
-
+  const numeric = parseFloat(amount) || 0;
   const wrongChain = chain?.id !== FUJI_CHAIN_ID;
-  const insufficient = balance !== null && amountIn > balance;
-  const canSubmit =
-    !busy && !wrongChain && !insufficient && amountIn > 0n && expectedOut > 0n &&
-    !!walletClient && !!publicClient && !!tokens && !!address;
 
-  async function submit() {
-    if (!canSubmit || !walletClient || !publicClient || !tokens || !address) return;
-    setBusy(true); setError("");
+  function computePreview(res: { r0: bigint; r1: bigint }): Preview | null {
+    const resIn = zeroForOne ? res.r0 : res.r1;
+    const resOut = zeroForOne ? res.r1 : res.r0;
+    let amountIn: bigint, amountOut: bigint;
+    const inputIsInToken = (side === "sell") === (denom === "vsp"); // sell+vsp or buy+usdc
+    try {
+      if (inputIsInToken) {
+        amountIn = parseUnits(amount as `${number}`, inDecimals);
+        amountOut = quoteOut(amountIn, resIn, resOut);
+      } else {
+        const desiredOut = parseUnits(amount as `${number}`, outDecimals);
+        amountIn = quoteIn(desiredOut, resIn, resOut);
+        if (amountIn === 0n) return null;
+        amountOut = quoteOut(amountIn, resIn, resOut);
+      }
+    } catch { return null; }
+    if (amountIn === 0n || amountOut === 0n) return null;
+    const minOut = (amountOut * (10_000n - SLIPPAGE_BPS)) / 10_000n;
+    const feeInToken = (amountIn * 3n) / 1000n;
+    const inF = Number(formatUnits(amountIn, inDecimals));
+    const outF = Number(formatUnits(amountOut, outDecimals));
+    const avg = side === "buy" ? inF / outF : outF / inF; // USDC per VSP either way
+    const impact = spotPrice > 0 ? Math.abs(avg - spotPrice) / spotPrice * 100 : 0;
+    return { amountIn, amountOut, minOut, feeInToken, avgPriceUsdcPerVsp: avg, impactPct: impact };
+  }
+
+  async function handlePreview() {
+    setPreviewing(true); setError(null);
+    try {
+      const res = await refresh();               // live reserves at preview time
+      if (!res) throw new Error("pool unreadable");
+      const p = computePreview(res);
+      if (!p) throw new Error("amount too small or exceeds pool depth");
+      const inBal = side === "buy" ? usdcBalance : vspBalance;
+      if (Number(formatUnits(p.amountIn, inDecimals)) > inBal) throw new Error("insufficient balance");
+      setPreview(p);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setPreviewing(false); }
+  }
+
+  async function handleConfirm() {
+    if (!preview || !walletClient || !publicClient || !tokens || !address) return;
+    setLoading(true); setError(null);
     try {
       const tokenIn = side === "buy" ? tokens.usdc : tokens.vsp;
-
-      // re-read reserves right before sending so minOut binds to fresh state
-      await refresh();
-
       const allowance = (await publicClient.readContract({
         address: tokenIn, abi: ERC20_ABI, functionName: "allowance", args: [address, pair],
       })) as bigint;
-      if (allowance < amountIn) {
+      if (allowance < preview.amountIn) {
         setStatus("Approve in your wallet…");
-        const approveHash = await walletClient.writeContract({
-          address: tokenIn, abi: ERC20_ABI, functionName: "approve", args: [pair, amountIn],
+        const h = await walletClient.writeContract({
+          address: tokenIn, abi: ERC20_ABI, functionName: "approve", args: [pair, preview.amountIn],
         });
         setStatus("Waiting for approval…");
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        await publicClient.waitForTransactionReceipt({ hash: h });
       }
-
       setStatus("Confirm the swap in your wallet…");
       const { request } = await publicClient.simulateContract({
         address: pair, abi: POOL_ABI, functionName: "swap",
-        args: [zeroForOne, amountIn, minOut], account: address,
+        args: [zeroForOne, preview.amountIn, preview.minOut], account: address,
       });
       const hash = await walletClient.writeContract(request);
       setStatus("Swapping…");
@@ -154,54 +187,155 @@ export default function PoolTradeModal({
       setStatus("Done ✓");
       onSwapped();
       setTimeout(onClose, 1200);
-    } catch (e: unknown) {
+    } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg.includes("InsufficientOutput") ? "price moved beyond the 1% slippage bound — try again" : msg.slice(0, 200));
-      setStatus("");
-    } finally {
-      setBusy(false);
+      setError(msg.includes("InsufficientOutput")
+        ? "price moved beyond the 1% slippage bound — preview again"
+        : msg.slice(0, 200));
+      setStatus(null);
+      setPreview(null); // back to step 1, like the old flow after a failed fill
+    } finally { setLoading(false); }
+  }
+
+  function handleMax() {
+    if (side === "buy") {
+      if (denom === "usdc") setAmount((usdcBalance * 0.9999).toFixed(2));
+      else setAmount(spotPrice > 0 ? ((usdcBalance * 0.9999) / spotPrice).toFixed(4) : "");
+    } else {
+      if (denom === "vsp") setAmount((vspBalance * 0.9999).toFixed(4));
+      else setAmount((vspBalance * 0.9999 * spotPrice).toFixed(2));
     }
   }
 
+  // display helpers (all in familiar units)
+  const pv = preview && {
+    qtyVsp: Number(formatUnits(side === "buy" ? preview.amountOut : preview.amountIn, 18)),
+    grossUsdc: Number(formatUnits(side === "buy" ? preview.amountIn : preview.amountOut, 6)),
+    feeUsdc: side === "buy"
+      ? Number(formatUnits(preview.feeInToken, 6))
+      : Number(formatUnits(preview.feeInToken, 18)) * spotPrice,
+    minRecv: Number(formatUnits(preview.minOut, outDecimals)),
+  };
+
   return (
-    <div className="pool-trade-modal" data-trackb="pool-trade">
-      <h3 style={{ marginTop: 0 }}>{side === "buy" ? "Buy VSP" : "Sell VSP"}</h3>
-      <p style={{ fontSize: 12, color: "#6b7280", marginTop: -6 }}>
-        Swaps execute on the public pool from your own wallet. The site never
-        holds your funds and is not the counterparty.
-      </p>
-
-      <label style={{ display: "block", fontSize: 13 }}>
-        You pay ({side === "buy" ? "USDC" : "VSP"})
-        <input
-          type="text" inputMode="decimal" value={amountStr} disabled={busy}
-          onChange={(e) => setAmountStr(e.target.value.replace(/[^0-9.]/g, ""))}
-          placeholder="0.0" className="pool-trade-input"
-          style={{ display: "block", width: "100%", marginTop: 4 }}
-        />
-      </label>
-      {balance !== null && (
-        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-          balance: {Number(formatUnits(balance, inDecimals)).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+    <div className="trade-modal-overlay" onClick={onClose}>
+      <div className="trade-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>{side === "buy" ? "Buy VSP" : "Sell VSP"}</h3>
+          <button onClick={onClose}
+            style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>
+            ×
+          </button>
         </div>
-      )}
 
-      <div style={{ fontSize: 13, marginTop: 10 }}>
-        You receive (est.): <b>{formatUnits(expectedOut, outDecimals)}</b> {side === "buy" ? "VSP" : "USDC"}
-        <div style={{ fontSize: 11, color: "#6b7280" }}>
-          min after 1% slippage: {formatUnits(minOut, outDecimals)}
-          {impactPct > 0.05 && <> · price impact ~{impactPct.toFixed(2)}%</>}
+        <div style={{ marginBottom: 8, fontSize: 13, color: "#6b7280" }}>
+          Connected chain: {chain?.name || "Unknown"} (ID: {chain?.id || "—"})
+          {wrongChain && <span style={{ color: "#b45309" }}> — switch to Avalanche Fuji</span>}
+        </div>
+
+        <div style={{ marginBottom: 12, fontSize: 13 }}>
+          {side === "buy" ? "Your USDC balance" : "Your VSP balance"}:{" "}
+          <strong>{side === "buy" ? usdcBalance.toFixed(2) : vspBalance.toFixed(4)}</strong>
+        </div>
+
+        <div style={{ marginBottom: 4, fontSize: 12, color: "#9ca3af" }}>
+          Pool price: ${spotPrice > 0 ? spotPrice.toFixed(4) : "—"}/VSP
+        </div>
+
+        {/* Amount input with denomination toggle */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+            <input
+              type="number" min="0" step="any" value={amount}
+              onChange={(e) => { setAmount(e.target.value); setPreview(null); }}
+              placeholder={denom === "vsp" ? "Amount in VSP" : "Amount in USDC"}
+              className="input" style={{ flex: 1 }}
+            />
+            <button className="btn"
+              onClick={() => { setDenom(denom === "vsp" ? "usdc" : "vsp"); setAmount(""); setPreview(null); }}
+              style={{ fontSize: 11, padding: "4px 8px", minWidth: 50, fontWeight: 600 }}
+              title="Switch between VSP and USDC">
+              {denom === "vsp" ? "VSP" : "USDC"} ⇄
+            </button>
+            <button className="btn" onClick={handleMax} style={{ fontSize: 11, padding: "4px 8px" }}>
+              Max
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: "#9ca3af" }}>
+            {denom === "vsp"
+              ? `≈ ${(numeric * spotPrice).toFixed(2)} USDC at current price`
+              : `≈ ${spotPrice > 0 ? (numeric / spotPrice).toFixed(4) : "—"} VSP at current price`}
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: "8px 12px", marginBottom: 8, background: "#fef2f2",
+            border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, color: "#dc2626" }}>
+            {error}
+          </div>
+        )}
+
+        {pv && preview && (
+          <div style={{ padding: "10px 12px", marginBottom: 8, background: "#f9fafb",
+            borderRadius: 6, fontSize: 12, lineHeight: 1.8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>You {side === "buy" ? "receive" : "send"}:</span>
+              <strong>{pv.qtyVsp.toFixed(4)} VSP</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{side === "buy" ? "Subtotal:" : "Gross proceeds:"}</span>
+              <span>{pv.grossUsdc.toFixed(2)} USDC</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+              <span>Pool fee (0.3%, stays in pool):</span>
+              <span>≈ {pv.feeUsdc.toFixed(2)} USDC</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600,
+              borderTop: "1px solid #e5e7eb", marginTop: 4, paddingTop: 4 }}>
+              <span>{side === "buy" ? "Total cost:" : "You receive:"}</span>
+              <span>{pv.grossUsdc.toFixed(2)} USDC</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", fontSize: 11 }}>
+              <span>Avg price:</span>
+              <span>${preview.avgPriceUsdcPerVsp.toFixed(4)}/VSP</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", fontSize: 11 }}>
+              <span>Min {side === "buy" ? "received" : "proceeds"} (1% slippage):</span>
+              <span>{pv.minRecv.toFixed(side === "buy" ? 4 : 2)} {side === "buy" ? "VSP" : "USDC"}</span>
+            </div>
+            {preview.impactPct > 0.5 && (
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#b45309", fontSize: 11 }}>
+                <span>Price impact:</span>
+                <span>~{preview.impactPct.toFixed(2)}%</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!preview ? (
+          <button className="btn btn-primary" onClick={handlePreview}
+            disabled={previewing || numeric <= 0 || wrongChain || !walletClient}
+            style={{ width: "100%", marginBottom: 8 }}>
+            {previewing ? "Calculating…" : "Preview Fill"}
+          </button>
+        ) : (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn" onClick={() => { setPreview(null); setError(null); }} style={{ flex: 1 }}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleConfirm} disabled={loading} style={{ flex: 1 }}>
+              {loading ? (status ?? "Processing…") : `${side === "buy" ? "Buy" : "Sell"} ${pv!.qtyVsp.toFixed(4)} VSP`}
+            </button>
+          </div>
+        )}
+        {loading && status && (
+          <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280", textAlign: "center" }}>{status}</div>
+        )}
+
+        <div style={{ marginTop: 8, fontSize: 10, color: "#9ca3af", textAlign: "center" }}>
+          Executes on the public pool from your own wallet — the site never holds your funds.
         </div>
       </div>
-
-      {wrongChain && <div className="pool-trade-warn" style={{ color: "#b45309", fontSize: 12, marginTop: 8 }}>switch your wallet to Avalanche Fuji (43113)</div>}
-      {insufficient && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>insufficient balance</div>}
-      {error && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{error}</div>}
-      {status && <div style={{ fontSize: 12, marginTop: 8 }}>{status}</div>}
-
-      <button className="btn btn-primary vsp-button" style={{ marginTop: 12 }} disabled={!canSubmit} onClick={submit}>
-        {busy ? "Working…" : side === "buy" ? "Buy VSP" : "Sell VSP"}
-      </button>
     </div>
   );
 }

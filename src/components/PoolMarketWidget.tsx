@@ -92,17 +92,12 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
         )}
       </div>
       {side && state?.pair && (
-        <div className="trade-modal-overlay" onClick={() => setSide(null)}>
-          <div className="trade-modal-content" onClick={(e) => e.stopPropagation()}>
-            <PoolTradeModal
-              side={side}
-              pair={state.pair as `0x${string}`}
-              onClose={() => setSide(null)}
-              onSwapped={refreshNow}
-            />
-            <button className="trade-close-btn" onClick={() => setSide(null)}>×</button>
-          </div>
-        </div>
+        <PoolTradeModal
+          side={side}
+          pair={state.pair as `0x${string}`}
+          onClose={() => setSide(null)}
+          onSwapped={refreshNow}
+        />
       )}
     </div>
   );
