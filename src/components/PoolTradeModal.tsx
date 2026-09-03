@@ -29,6 +29,33 @@ const POOL_ABI = [
   },
 ] as const;
 
+// patch_venue: UniV2-interface pair + router (Joe V1 on Fuji, Uniswap v2 on
+// Avalanche mainnet). Orientation comes from the backend (token0IsVsp) — the
+// factory sorts token0/token1 by address, so VSP==token0 is never assumed.
+const UNIV2_PAIR_ABI = [
+  { type: "function", name: "token0", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+  { type: "function", name: "token1", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+  {
+    type: "function", name: "getReserves", inputs: [],
+    outputs: [{ type: "uint112" }, { type: "uint112" }, { type: "uint32" }],
+    stateMutability: "view",
+  },
+] as const;
+
+const UNIV2_ROUTER_ABI = [
+  {
+    type: "function", name: "swapExactTokensForTokens",
+    inputs: [
+      { name: "amountIn", type: "uint256" },
+      { name: "amountOutMin", type: "uint256" },
+      { name: "path", type: "address[]" },
+      { name: "to", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+    outputs: [{ name: "amounts", type: "uint256[]" }], stateMutability: "nonpayable",
+  },
+] as const;
+
 const ERC20_ABI = [
   { type: "function", name: "allowance", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "approve", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }], stateMutability: "nonpayable" },
@@ -60,10 +87,13 @@ type Preview = {
 };
 
 export default function PoolTradeModal({
-  side, pair, onClose, onSwapped,
+  side, pair, venue = "mockcpamm", router, token0IsVsp = true, onClose, onSwapped,
 }: {
   side: Side;
   pair: `0x${string}`;
+  venue?: "mockcpamm" | "univ2";
+  router?: `0x${string}`;
+  token0IsVsp?: boolean;
   onClose: () => void;
   onSwapped: () => void;
 }) {
@@ -71,14 +101,14 @@ export default function PoolTradeModal({
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  const zeroForOne = side === "sell"; // token0 = VSP
+  const isUniv2 = venue === "univ2";
   const inDecimals = side === "buy" ? 6 : 18;
   const outDecimals = side === "buy" ? 18 : 6;
 
   const [denom, setDenom] = useState<Denom>("vsp");
   const [amount, setAmount] = useState("");
   const [tokens, setTokens] = useState<{ vsp: `0x${string}`; usdc: `0x${string}` } | null>(null);
-  const [reserves, setReserves] = useState<{ r0: bigint; r1: bigint } | null>(null);
+  const [reserves, setReserves] = useState<{ rVsp: bigint; rUsdc: bigint } | null>(null);
   const [vspBalance, setVspBalance] = useState(0);
   const [usdcBalance, setUsdcBalance] = useState(0);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -89,38 +119,50 @@ export default function PoolTradeModal({
 
   const refresh = useCallback(async () => {
     if (!publicClient || !address) return null;
-    const [t0, t1, r0, r1] = await Promise.all([
-      publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "token0" }),
-      publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "token1" }),
-      publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve0" }),
-      publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve1" }),
+    const pairAbi = isUniv2 ? UNIV2_PAIR_ABI : POOL_ABI;
+    const [t0, t1] = await Promise.all([
+      publicClient.readContract({ address: pair, abi: pairAbi, functionName: "token0" }),
+      publicClient.readContract({ address: pair, abi: pairAbi, functionName: "token1" }),
     ]);
-    const vsp = t0 as `0x${string}`, usdc = t1 as `0x${string}`;
+    let r0: bigint, r1: bigint;
+    if (isUniv2) {
+      const gr = (await publicClient.readContract({
+        address: pair, abi: UNIV2_PAIR_ABI, functionName: "getReserves",
+      })) as readonly [bigint, bigint, number];
+      r0 = gr[0]; r1 = gr[1];
+    } else {
+      [r0, r1] = (await Promise.all([
+        publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve0" }),
+        publicClient.readContract({ address: pair, abi: POOL_ABI, functionName: "reserve1" }),
+      ])) as [bigint, bigint];
+    }
+    const vsp = (token0IsVsp ? t0 : t1) as `0x${string}`;
+    const usdc = (token0IsVsp ? t1 : t0) as `0x${string}`;
     const [vb, ub] = await Promise.all([
       publicClient.readContract({ address: vsp, abi: ERC20_ABI, functionName: "balanceOf", args: [address] }),
       publicClient.readContract({ address: usdc, abi: ERC20_ABI, functionName: "balanceOf", args: [address] }),
     ]);
-    const res = { r0: r0 as bigint, r1: r1 as bigint };
+    const res = token0IsVsp ? { rVsp: r0, rUsdc: r1 } : { rVsp: r1, rUsdc: r0 };
     setTokens({ vsp, usdc });
     setReserves(res);
     setVspBalance(Number(formatUnits(vb as bigint, 18)));
     setUsdcBalance(Number(formatUnits(ub as bigint, 6)));
     return res;
-  }, [publicClient, address, pair]);
+  }, [publicClient, address, pair, side, isUniv2, token0IsVsp]);
 
   useEffect(() => { refresh().catch(() => setError("could not read pool state")); }, [refresh]);
 
   const spotPrice = useMemo(() => {
-    if (!reserves || reserves.r0 === 0n) return 0;
-    return Number(formatUnits(reserves.r1, 6)) / Number(formatUnits(reserves.r0, 18));
+    if (!reserves || reserves.rVsp === 0n) return 0;
+    return Number(formatUnits(reserves.rUsdc, 6)) / Number(formatUnits(reserves.rVsp, 18));
   }, [reserves]);
 
   const numeric = parseFloat(amount) || 0;
   const wrongChain = chain?.id !== FUJI_CHAIN_ID;
 
-  function computePreview(res: { r0: bigint; r1: bigint }): Preview | null {
-    const resIn = zeroForOne ? res.r0 : res.r1;
-    const resOut = zeroForOne ? res.r1 : res.r0;
+  function computePreview(res: { rVsp: bigint; rUsdc: bigint }): Preview | null {
+    const resIn = side === "sell" ? res.rVsp : res.rUsdc;
+    const resOut = side === "sell" ? res.rUsdc : res.rVsp;
     let amountIn: bigint, amountOut: bigint;
     const inputIsInToken = (side === "sell") === (denom === "vsp"); // sell+vsp or buy+usdc
     try {
@@ -164,22 +206,37 @@ export default function PoolTradeModal({
     setLoading(true); setError(null);
     try {
       const tokenIn = side === "buy" ? tokens.usdc : tokens.vsp;
+      const tokenOut = side === "buy" ? tokens.vsp : tokens.usdc;
+      if (isUniv2 && !router) throw new Error("venue router not configured");
+      const spender = isUniv2 ? (router as `0x${string}`) : pair;
       const allowance = (await publicClient.readContract({
-        address: tokenIn, abi: ERC20_ABI, functionName: "allowance", args: [address, pair],
+        address: tokenIn, abi: ERC20_ABI, functionName: "allowance", args: [address, spender],
       })) as bigint;
       if (allowance < preview.amountIn) {
         setStatus("Approve in your wallet…");
         const h = await walletClient.writeContract({
-          address: tokenIn, abi: ERC20_ABI, functionName: "approve", args: [pair, preview.amountIn],
+          address: tokenIn, abi: ERC20_ABI, functionName: "approve", args: [spender, preview.amountIn],
         });
         setStatus("Waiting for approval…");
         await publicClient.waitForTransactionReceipt({ hash: h });
       }
       setStatus("Confirm the swap in your wallet…");
-      const { request } = await publicClient.simulateContract({
-        address: pair, abi: POOL_ABI, functionName: "swap",
-        args: [zeroForOne, preview.amountIn, preview.minOut], account: address,
-      });
+      let request;
+      if (isUniv2) {
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+        ({ request } = await publicClient.simulateContract({
+          address: router as `0x${string}`, abi: UNIV2_ROUTER_ABI,
+          functionName: "swapExactTokensForTokens",
+          args: [preview.amountIn, preview.minOut, [tokenIn, tokenOut], address, deadline],
+          account: address,
+        }));
+      } else {
+        const zeroForOne = (side === "sell") === token0IsVsp;
+        ({ request } = await publicClient.simulateContract({
+          address: pair, abi: POOL_ABI, functionName: "swap",
+          args: [zeroForOne, preview.amountIn, preview.minOut], account: address,
+        }));
+      }
       const hash = await walletClient.writeContract(request);
       setStatus("Swapping…");
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
