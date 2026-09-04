@@ -16,13 +16,10 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
   const [side, setSide] = useState<"buy" | "sell" | null>(null);
   const { address, isConnected } = useAccount();
   const { data: contracts } = useContracts();
-  // patch_venue r5: legacy-widget balance pattern restored — polled every 5s
-  // so deposits/swaps reflect without a manual refresh. AVAX shown because
-  // venue swaps cost the user gas; VSP because it's the asset being traded.
-  const { data: avaxBal } = useBalance({
-    address,
-    query: { enabled: Boolean(isConnected && address), refetchInterval: 5000 },
-  });
+  // patch_venue r6 (founder direction): header carries only what every
+  // visitor needs — price, identity, VSP balance. AVAX (a swap-time gas
+  // concern) moved into the trade modal; pool metrics behind the "pool" link.
+  const [showPool, setShowPool] = useState(false);
   const { data: vspBal, refetch: refetchVsp } = useBalance({
     address,
     token: contracts?.VSPToken,
@@ -31,7 +28,7 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
       refetchInterval: 5000,
     },
   });
-  const fmtBal = (v?: string, dp = 3) =>
+  const fmtBal = (v?: string, dp = 2) =>
     v === undefined ? "…" : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp });
   const refreshNow = async () => {
     const probe = await probePool();
@@ -77,21 +74,16 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             <span style={{ fontSize: 12, color: "#b45309" }}>price unavailable</span>
           )}
         </span>
-        {state && state.vsp_reserve !== undefined && (
-          <span style={{ fontSize: 11, color: "#6b7280" }}>
-            pool: {Math.round(state.vsp_reserve).toLocaleString()} VSP /{" "}
-            {Math.round(state.usdc_reserve ?? 0).toLocaleString()} USDC
-          </span>
-        )}
+
         {/* patch_venue r4: the legacy VSPMarketWidget hosted the app's ONLY
             wallet-connect control (RainbowKit ConnectButton) and hid Buy/Sell
             until connected. Restore both behaviors here. */}
+        <ConnectButton showBalance={false} />
         {isConnected && (
           <span style={{ fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>
-            {fmtBal(avaxBal?.formatted)} AVAX · {fmtBal(vspBal?.formatted, 2)} VSP
+            {fmtBal(vspBal?.formatted)} VSP
           </span>
         )}
-        <ConnectButton showBalance={false} />
         {state?.pair ? (
           <>
             {isConnected && (
@@ -112,12 +104,41 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             </button>
             </>
             )}
-            {swapUrl && (
-              <a href={swapUrl} target="_blank" rel="noopener noreferrer"
-                 style={{ fontSize: 11, color: "#6b7280", textDecoration: "underline" }}>
-                view pool
-              </a>
-            )}
+            <span style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowPool((v) => !v)}
+                style={{ border: "none", background: "none", fontSize: 12,
+                         color: "#6b7280", textDecoration: "underline", cursor: "pointer" }}>
+                pool
+              </button>
+              {showPool && state && (
+                <div style={{ position: "absolute", right: 0, top: "130%", zIndex: 50,
+                              background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8,
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)", padding: "10px 14px",
+                              fontSize: 12, lineHeight: 1.9, minWidth: 230 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                    <span>Price</span><b>${(state.price_usdc_per_vsp ?? 0).toFixed(4)}/VSP</b>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                    <span>Reserves</span>
+                    <span>{Math.round(state.vsp_reserve ?? 0).toLocaleString()} VSP / {Math.round(state.usdc_reserve ?? 0).toLocaleString()} USDC</span>
+                  </div>
+                  {state.vsp_circulating !== undefined && (
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                      <span>Circulating</span>
+                      <span>{Math.round(state.vsp_circulating).toLocaleString()} VSP</span>
+                    </div>
+                  )}
+                  <div style={{ marginTop: 4 }}>
+                    <a href={swapUrl || `https://testnet.snowtrace.io/address/${state.pair}`}
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ color: "#4f46e5" }}>
+                      view pair on Snowtrace →
+                    </a>
+                  </div>
+                </div>
+              )}
+            </span>
           </>
         ) : (
           <span style={{ fontSize: 11, color: "#6b7280" }}>Trading opens at launch</span>
