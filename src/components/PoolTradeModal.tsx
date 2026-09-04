@@ -7,7 +7,7 @@
 // live on-chain reserves with the contract's exact 997/1000 math; minOut at 1%.
 // VENUE ADAPTER: speaks MockCPAMM; mainnet AMM needs its own (checklist #34).
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, useBalance, usePublicClient, useWalletClient } from "wagmi";
 import { parseUnits, formatUnits, createPublicClient, custom } from "viem";
 import type { PublicClient } from "viem";
 
@@ -99,6 +99,13 @@ export default function PoolTradeModal({
   onSwapped: () => void;
 }) {
   const { address, chain } = useAccount();
+  // patch_venue r6: AVAX lives here now (swap-time gas concern, not a header
+  // concern). Zero gas gets a pre-flight warning instead of a wallet error.
+  const { data: gasBal } = useBalance({
+    address,
+    query: { enabled: Boolean(address), refetchInterval: 5000 },
+  });
+  const noGas = gasBal !== undefined && gasBal.value === 0n;
   const wagmiClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
@@ -327,7 +334,17 @@ export default function PoolTradeModal({
 
         <div style={{ marginBottom: 4, fontSize: 12, color: "#9ca3af" }}>
           Pool price: ${spotPrice > 0 ? spotPrice.toFixed(4) : "—"}/VSP
+          {gasBal && (
+            <span style={{ marginLeft: 10 }}>
+              Gas: {Number(gasBal.formatted).toLocaleString(undefined, { maximumFractionDigits: 3 })} AVAX
+            </span>
+          )}
         </div>
+        {noGas && (
+          <div style={{ color: "#b45309", fontSize: 12, marginBottom: 6 }}>
+            This wallet has no AVAX — swaps need a little for gas (staking stays gasless).
+          </div>
+        )}
 
         {/* Amount input with denomination toggle */}
         <div style={{ marginBottom: 8 }}>
