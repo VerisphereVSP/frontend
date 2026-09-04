@@ -3,6 +3,7 @@
 // backend (swap_url). Replaces the MM buy/sell surface once the pool is live.
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { probePool, PoolState } from "../api/pool";
 import PoolTradeModal from "./PoolTradeModal";
 
@@ -62,24 +63,30 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             {Math.round(state.usdc_reserve ?? 0).toLocaleString()} USDC
           </span>
         )}
+        {/* patch_venue r4: the legacy VSPMarketWidget hosted the app's ONLY
+            wallet-connect control (RainbowKit ConnectButton) and hid Buy/Sell
+            until connected. Restore both behaviors here. */}
+        <ConnectButton />
         {state?.pair ? (
           <>
+            {isConnected && (
+            <>
             <button
               className="btn btn-primary vsp-button"
-              disabled={!isConnected || unavailable}
-              title={!isConnected ? "connect a wallet to trade" : undefined}
+              disabled={unavailable}
               onClick={() => setSide("buy")}
             >
               Buy
             </button>
             <button
               className="btn vsp-button"
-              disabled={!isConnected || unavailable}
-              title={!isConnected ? "connect a wallet to trade" : undefined}
+              disabled={unavailable}
               onClick={() => setSide("sell")}
             >
               Sell
             </button>
+            </>
+            )}
             {swapUrl && (
               <a href={swapUrl} target="_blank" rel="noopener noreferrer"
                  style={{ fontSize: 11, color: "#6b7280", textDecoration: "underline" }}>
