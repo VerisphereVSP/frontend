@@ -13,6 +13,9 @@ export type PoolState = {
   usdc_reserve?: number;
   vsp_circulating?: number;
   pair?: string;
+  venue?: "mockcpamm" | "univ2";      // patch_venue
+  router?: string | null;             // patch_venue: UniV2 router for in-app swaps
+  token0_is_vsp?: boolean;            // patch_venue: pair orientation (univ2 sorts by address)
   swap_url?: string;
   updated_at?: number;
 };

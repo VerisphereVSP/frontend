@@ -95,6 +95,9 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
         <PoolTradeModal
           side={side}
           pair={state.pair as `0x${string}`}
+          venue={state.venue ?? "mockcpamm"}
+          router={(state.router ?? undefined) as `0x${string}` | undefined}
+          token0IsVsp={state.token0_is_vsp ?? true}
           onClose={() => setSide(null)}
           onSwapped={refreshNow}
         />
