@@ -248,23 +248,26 @@ export default function PoolTradeModal({
         await publicClient.waitForTransactionReceipt({ hash: h });
       }
       setStatus("Confirm the swap in your wallet…");
-      let request;
+      // simulate + send inside each branch: the two requests are differently
+      // typed and writeContract cannot take the union.
+      let hash: `0x${string}`;
       if (isUniv2) {
         const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
-        ({ request } = await publicClient.simulateContract({
+        const { request } = await publicClient.simulateContract({
           address: router as `0x${string}`, abi: UNIV2_ROUTER_ABI,
           functionName: "swapExactTokensForTokens",
           args: [preview.amountIn, preview.minOut, [tokenIn, tokenOut], address, deadline],
           account: address,
-        }));
+        });
+        hash = await walletClient.writeContract(request);
       } else {
         const zeroForOne = (side === "sell") === token0IsVsp;
-        ({ request } = await publicClient.simulateContract({
+        const { request } = await publicClient.simulateContract({
           address: pair, abi: POOL_ABI, functionName: "swap",
           args: [zeroForOne, preview.amountIn, preview.minOut], account: address,
-        }));
+        });
+        hash = await walletClient.writeContract(request);
       }
-      const hash = await walletClient.writeContract(request);
       setStatus("Swapping…");
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error("swap transaction reverted");
