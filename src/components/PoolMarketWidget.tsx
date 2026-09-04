@@ -2,8 +2,9 @@
 // Public-AMM era trade surface: pool price + a Swap link supplied by the
 // backend (swap_url). Replaces the MM buy/sell surface once the pool is live.
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useBalance } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useContracts } from "../contracts";
 import { probePool, PoolState } from "../api/pool";
 import PoolTradeModal from "./PoolTradeModal";
 
@@ -13,10 +14,29 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
   const [state, setState] = useState<PoolState | null>(initial);
   const [unavailable, setUnavailable] = useState(initial === null);
   const [side, setSide] = useState<"buy" | "sell" | null>(null);
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
+  const { data: contracts } = useContracts();
+  // patch_venue r5: legacy-widget balance pattern restored — polled every 5s
+  // so deposits/swaps reflect without a manual refresh. AVAX shown because
+  // venue swaps cost the user gas; VSP because it's the asset being traded.
+  const { data: avaxBal } = useBalance({
+    address,
+    query: { enabled: Boolean(isConnected && address), refetchInterval: 5000 },
+  });
+  const { data: vspBal, refetch: refetchVsp } = useBalance({
+    address,
+    token: contracts?.VSPToken,
+    query: {
+      enabled: Boolean(isConnected && address && contracts?.VSPToken),
+      refetchInterval: 5000,
+    },
+  });
+  const fmtBal = (v?: string, dp = 3) =>
+    v === undefined ? "…" : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp });
   const refreshNow = async () => {
     const probe = await probePool();
     if (probe.kind === "pool") { setState(probe.state); setUnavailable(false); }
+    refetchVsp();  // r5: swap just settled — reflect the new VSP balance now
   };
 
   useEffect(() => {
@@ -66,7 +86,12 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
         {/* patch_venue r4: the legacy VSPMarketWidget hosted the app's ONLY
             wallet-connect control (RainbowKit ConnectButton) and hid Buy/Sell
             until connected. Restore both behaviors here. */}
-        <ConnectButton />
+        {isConnected && (
+          <span style={{ fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>
+            {fmtBal(avaxBal?.formatted)} AVAX · {fmtBal(vspBal?.formatted, 2)} VSP
+          </span>
+        )}
+        <ConnectButton showBalance={false} />
         {state?.pair ? (
           <>
             {isConnected && (
