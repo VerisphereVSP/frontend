@@ -59,28 +59,12 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
   return (
     <div className="vsp-market-widget" data-trackb="pool-market">
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontWeight: 600 }}>
-          VSP{" "}
-          {price !== undefined ? (
-            <span style={{ opacity: unavailable ? 0.5 : 1 }}>
-              ${price.toFixed(4)}
-              {unavailable && (
-                <span style={{ fontSize: 11, marginLeft: 6, color: "#b45309" }}>
-                  price unavailable — showing last known
-                </span>
-              )}
-            </span>
-          ) : (
-            <span style={{ fontSize: 12, color: "#b45309" }}>price unavailable</span>
-          )}
-        </span>
-
-        {/* patch_venue r4: the legacy VSPMarketWidget hosted the app's ONLY
-            wallet-connect control (RainbowKit ConnectButton) and hid Buy/Sell
-            until connected. Restore both behaviors here. */}
+        {/* patch_venue r7 order (founder direction): pill · VSP balance
+            (price-styled) · Buy/Sell · price ($n.nnnn/VSP, pool-link-sized)
+            · pool. r4 note stands: the pill is the app's only connect control. */}
         <ConnectButton showBalance={false} />
         {isConnected && (
-          <span style={{ fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>
+          <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
             {fmtBal(vspBal?.formatted)} VSP
           </span>
         )}
@@ -104,6 +88,20 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             </button>
             </>
             )}
+            <span style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
+              {price !== undefined ? (
+                <span style={{ opacity: unavailable ? 0.5 : 1 }}>
+                  ${price.toFixed(4)}/VSP
+                  {unavailable && (
+                    <span style={{ fontSize: 11, marginLeft: 6, color: "#b45309" }}>
+                      price unavailable — showing last known
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span style={{ color: "#b45309" }}>price unavailable</span>
+              )}
+            </span>
             <span style={{ position: "relative" }}>
               <button
                 onClick={() => setShowPool((v) => !v)}
