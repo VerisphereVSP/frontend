@@ -8,7 +8,8 @@
 // VENUE ADAPTER: speaks MockCPAMM; mainnet AMM needs its own (checklist #34).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
+import { parseUnits, formatUnits, createPublicClient, custom } from "viem";
+import type { PublicClient } from "viem";
 
 const FUJI_CHAIN_ID = 43113;
 const SLIPPAGE_BPS = 100n; // 1%
@@ -98,8 +99,22 @@ export default function PoolTradeModal({
   onSwapped: () => void;
 }) {
   const { address, chain } = useAccount();
-  const publicClient = usePublicClient();
+  const wagmiClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
+  // patch_venue r4: this app deliberately avoids leaning on public RPCs from
+  // the browser (the backend read-proxies exist for that reason). For the
+  // trade path we read through the USER'S OWN wallet provider — the same
+  // provider that will send the tx — and fall back to the wagmi client.
+  const injectedClient = useMemo<PublicClient | null>(() => {
+    const eth = typeof window !== "undefined" ? (window as { ethereum?: unknown }).ethereum : undefined;
+    if (!eth) return null;
+    try {
+      return createPublicClient({ chain, transport: custom(eth as Parameters<typeof custom>[0]) });
+    } catch { return null; }
+  }, [chain]);
+  const [activeClient, setActiveClient] = useState<PublicClient | null>(null);
+  const publicClient = activeClient ?? injectedClient ?? wagmiClient ?? null;
 
   const isUniv2 = venue === "univ2";
   const inDecimals = side === "buy" ? 6 : 18;
@@ -118,7 +133,19 @@ export default function PoolTradeModal({
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!publicClient || !address) return null;
+    if (!address) return null;
+    // choose a working client once: wallet transport first, wagmi fallback
+    const candidates = [injectedClient, wagmiClient].filter(Boolean) as PublicClient[];
+    let publicClient: PublicClient | null = activeClient;
+    if (!publicClient) {
+      for (const c of candidates) {
+        try {
+          await c.getChainId();
+          publicClient = c; setActiveClient(c); break;
+        } catch { /* try next */ }
+      }
+    }
+    if (!publicClient) throw new Error("no working RPC (wallet or default)");
     const pairAbi = isUniv2 ? UNIV2_PAIR_ABI : POOL_ABI;
     const [t0, t1] = await Promise.all([
       publicClient.readContract({ address: pair, abi: pairAbi, functionName: "token0" }),
@@ -148,7 +175,7 @@ export default function PoolTradeModal({
     setVspBalance(Number(formatUnits(vb as bigint, 18)));
     setUsdcBalance(Number(formatUnits(ub as bigint, 6)));
     return res;
-  }, [publicClient, address, pair, side, isUniv2, token0IsVsp]);
+  }, [address, pair, side, isUniv2, token0IsVsp, injectedClient, wagmiClient, activeClient]);
 
   useEffect(() => { refresh().catch(() => setError("could not read pool state")); }, [refresh]);
 
@@ -221,23 +248,26 @@ export default function PoolTradeModal({
         await publicClient.waitForTransactionReceipt({ hash: h });
       }
       setStatus("Confirm the swap in your wallet…");
-      let request;
+      // simulate + send inside each branch: the two requests are differently
+      // typed and writeContract cannot take the union.
+      let hash: `0x${string}`;
       if (isUniv2) {
         const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
-        ({ request } = await publicClient.simulateContract({
+        const { request } = await publicClient.simulateContract({
           address: router as `0x${string}`, abi: UNIV2_ROUTER_ABI,
           functionName: "swapExactTokensForTokens",
           args: [preview.amountIn, preview.minOut, [tokenIn, tokenOut], address, deadline],
           account: address,
-        }));
+        });
+        hash = await walletClient.writeContract(request);
       } else {
         const zeroForOne = (side === "sell") === token0IsVsp;
-        ({ request } = await publicClient.simulateContract({
+        const { request } = await publicClient.simulateContract({
           address: pair, abi: POOL_ABI, functionName: "swap",
           args: [zeroForOne, preview.amountIn, preview.minOut], account: address,
-        }));
+        });
+        hash = await walletClient.writeContract(request);
       }
-      const hash = await walletClient.writeContract(request);
       setStatus("Swapping…");
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error("swap transaction reverted");
