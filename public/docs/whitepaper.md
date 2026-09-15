@@ -1,5 +1,5 @@
 # Verisphere: A Truth-Staking Protocol
-### White Paper — v16.1 (September 2026)
+### White Paper — v16.2 (September 2026)
 **Date:** July 2026
 **Contact:** info@verisphere.co
 
@@ -190,7 +190,7 @@ if isChallenge: contribution = -contribution
 
 A positive contribution adds to the child's support side. A negative contribution adds to the child's challenge side.
 
-**Bounded fan-in.** For gas safety, the ScoreEngine processes at most `maxIncomingEdges` incoming links per claim and sums at most `maxOutgoingLinks` outgoing links per parent during the share computation. Both limits default to 64 and are governance-configurable. When a claim or parent exceeds its limit, the relevant edges are sorted by link stake descending — with ties broken deterministically by link postId ascending (older link wins) — and only the top-N participate. Lower-staked edges beyond the cap are inert: they neither contribute to the parent's denominator nor produce a numerator. This preserves conservation of influence (§4.4) under bounded fan-out: a parent's mass is fully and exclusively distributed across its top-N outgoing links. Off-chain indexers that recompute scores should apply the same sort-and-cap rule with the same tiebreak to match on-chain behavior.
+**Bounded fan-in.** For gas safety, the ScoreEngine processes at most `maxIncomingEdges` incoming links per claim and sums at most `maxOutgoingLinks` outgoing links per parent during the share computation. Both limits default to 64 and are governance-configurable. When a claim or parent exceeds its limit, the relevant edges are sorted by link stake descending — with ties broken deterministically by link postId ascending (older link wins) — and only the top-N participate. Links whose parent claim is *inactive* (below the activity threshold) contribute nothing and are ranked as if their stake were zero, so they can never occupy a bounded slot or displace contributing evidence (R2-H). Writes are never refused by these bounds: LinkGraph accepts up to 1,000 incoming links per claim; the scoring bound decides which of them count, and stronger evidence that arrives later displaces weaker earlier links by out-staking them. Lower-staked edges beyond the cap are inert: they neither contribute to the parent's denominator nor produce a numerator. This preserves conservation of influence (§4.4) under bounded fan-out: a parent's mass is fully and exclusively distributed across its top-N outgoing links. Off-chain indexers that recompute scores should apply the same sort-and-cap rule with the same tiebreak to match on-chain behavior.
 
 #### 4.2.3 Effective VS Computation
 
