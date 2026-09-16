@@ -292,12 +292,24 @@ export default function PoolTradeModal({
   }
 
   function handleMax() {
+    // When the input is the OUT token (buy+vsp, sell+usdc), "max" is what the
+    // full balance of the IN token actually fetches THROUGH the pool (0.3% fee
+    // + price impact), not balance × spot — spot overstates it, and the
+    // over-balance guard then correctly refuses the number Max just typed.
+    // Floor the display so the guard's reverse quote never exceeds the balance.
+    const r = reserves;
     if (side === "buy") {
-      if (denom === "usdc") setAmount((usdcBalance * 0.9999).toFixed(2));
-      else setAmount(spotPrice > 0 ? ((usdcBalance * 0.9999) / spotPrice).toFixed(4) : "");
+      if (denom === "usdc") { setAmount((usdcBalance * 0.9999).toFixed(2)); return; }
+      const inAmt = parseUnits((usdcBalance * 0.9999).toFixed(6) as `${number}`, 6);
+      const out = r ? quoteOut(inAmt, r.rUsdc, r.rVsp) : 0n;
+      setAmount(out > 0n ? (Math.floor(Number(formatUnits(out, 18)) * 1e4) / 1e4).toFixed(4)
+                         : spotPrice > 0 ? ((usdcBalance * 0.9999) / spotPrice).toFixed(4) : "");
     } else {
-      if (denom === "vsp") setAmount((vspBalance * 0.9999).toFixed(4));
-      else setAmount((vspBalance * 0.9999 * spotPrice).toFixed(2));
+      if (denom === "vsp") { setAmount((vspBalance * 0.9999).toFixed(4)); return; }
+      const inAmt = parseUnits((vspBalance * 0.9999).toFixed(18) as `${number}`, 18);
+      const out = r ? quoteOut(inAmt, r.rVsp, r.rUsdc) : 0n;
+      setAmount(out > 0n ? (Math.floor(Number(formatUnits(out, 6)) * 100) / 100).toFixed(2)
+                         : (vspBalance * 0.9999 * spotPrice).toFixed(2));
     }
   }
 
