@@ -253,6 +253,20 @@ export default function PoolTradeModal({
         });
         setStatus("Waiting for approval…");
         await publicClient.waitForTransactionReceipt({ hash: h });
+        // The wallet simulates the swap on ITS OWN node, which on Fuji can lag
+        // our read node by a block or two: a receipt here did not mean the
+        // wallet's node had the approval yet ("TRANSFER_FROM_FAILED" on the
+        // very first sell-everything). Poll the allowance through the wallet's
+        // transport until it reflects the approval before asking it to sign.
+        const walletReader = createPublicClient({ chain: walletClient.chain, transport: custom(walletClient.transport) });
+        for (let i = 0; i < 20; i++) {
+          const a = (await walletReader.readContract({
+            address: tokenIn, abi: ERC20_ABI, functionName: "allowance", args: [address, spender],
+          })) as bigint;
+          if (a >= preview.amountIn) break;
+          setStatus(`Waiting for the wallet to see the approval… (${i + 1})`);
+          await new Promise((r) => setTimeout(r, 1500));
+        }
       }
       setStatus("Confirm the swap in your wallet…");
       // simulate + send inside each branch: the two requests are differently
