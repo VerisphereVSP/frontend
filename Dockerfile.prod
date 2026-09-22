@@ -14,7 +14,9 @@ FROM node:20-slim AS protocol-builder
 WORKDIR /protocol
 COPY core/out ../core/out
 COPY protocol/package*.json ./
-RUN npm install
+# production deps only: the SDK's devDependencies pin a different wagmi major, and a
+# second wagmi copy under /protocol/node_modules breaks the app's WagmiProvider context
+RUN npm ci --omit=dev || npm install --omit=dev
 COPY protocol/src ./src
 COPY protocol/script ./script
 COPY protocol/tsconfig.json ./

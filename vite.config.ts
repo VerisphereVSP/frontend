@@ -14,6 +14,11 @@ export default defineConfig({
         ? path.resolve(process.env.PROTOCOL_PATH, "dist")
         : path.resolve(__dirname, "../protocol/dist"),
     },
+    // The SDK (@verisphere/protocol) lives OUTSIDE this package and carries its own
+    // node_modules; without dedupe its wagmi/viem/react resolve to a second copy,
+    // and hooks then throw "useConfig must be used within WagmiProvider"
+    // (mainnet ceremony, 2026-09-22). One copy of each, ours.
+    dedupe: ["react", "react-dom", "wagmi", "@wagmi/core", "viem", "@tanstack/react-query"],
   },
 
   server: {
