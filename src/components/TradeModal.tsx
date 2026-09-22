@@ -1,4 +1,5 @@
 // frontend/src/components/TradeModal.tsx
+import { EXPECTED_CHAIN_ID, CHAIN_LABEL } from "../web3/chains";
 import { fireToast, friendlyError } from "../utils/errorMessages";
 import { useState, useEffect } from "react";
 import { useAccount, useBalance, useWalletClient, usePublicClient } from "wagmi";
@@ -123,11 +124,11 @@ export default function TradeModal({
   if (!MM_ADDRESS)
     return <div className="modal error">Missing MM_ADDRESS in .env</div>;
 
-  if (chain?.id !== 43113) {
+  if (chain?.id !== EXPECTED_CHAIN_ID) {
     return (
       <div className="modal error">
         <h3>Wrong Network</h3>
-        <p>Please switch to Avalanche Fuji Testnet (chain ID 43113)</p>
+        <p>Please switch to {CHAIN_LABEL} (chain ID {EXPECTED_CHAIN_ID})</p>
         <button className="btn" onClick={onClose}>
           Close
         </button>

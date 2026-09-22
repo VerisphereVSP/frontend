@@ -1,4 +1,5 @@
 // frontend/src/components/StakeModal.tsx
+import { EXPECTED_CHAIN_ID } from "../web3/chains";
 import { useState } from "react";
 import { useAccount, useBalance } from "wagmi";
 import { getAddresses } from "@verisphere/protocol";
@@ -28,7 +29,7 @@ export default function StakeModal({
   // VSP wallet balance
   const { data: vspBalanceData } = useBalance({
     address,
-    token: getAddresses(chain?.id ?? 43113).VSPToken as `0x${string}`,
+    token: getAddresses(chain?.id ?? EXPECTED_CHAIN_ID).VSPToken as `0x${string}`,
     query: { enabled: Boolean(isConnected && address) },
   });
 

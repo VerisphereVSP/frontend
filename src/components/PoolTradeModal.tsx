@@ -11,7 +11,7 @@ import { useAccount, useBalance, usePublicClient, useWalletClient } from "wagmi"
 import { parseUnits, formatUnits, createPublicClient, custom } from "viem";
 import type { PublicClient } from "viem";
 
-const FUJI_CHAIN_ID = 43113;
+import { EXPECTED_CHAIN_ID, CHAIN_LABEL } from "../web3/chains";
 const SLIPPAGE_BPS = 100n; // 1%
 
 const POOL_ABI = [
@@ -192,7 +192,7 @@ export default function PoolTradeModal({
   }, [reserves]);
 
   const numeric = parseFloat(amount) || 0;
-  const wrongChain = chain?.id !== FUJI_CHAIN_ID;
+  const wrongChain = chain?.id !== EXPECTED_CHAIN_ID;
 
   function computePreview(res: { rVsp: bigint; rUsdc: bigint }): Preview | null {
     const resIn = side === "sell" ? res.rVsp : res.rUsdc;
@@ -350,7 +350,7 @@ export default function PoolTradeModal({
 
         <div style={{ marginBottom: 8, fontSize: 13, color: "#6b7280" }}>
           Connected chain: {chain?.name || "Unknown"} (ID: {chain?.id || "—"})
-          {wrongChain && <span style={{ color: "#b45309" }}> — switch to Avalanche Fuji</span>}
+          {wrongChain && <span style={{ color: "#b45309" }}> — switch to {CHAIN_LABEL}</span>}
         </div>
 
         <div style={{ marginBottom: 12, fontSize: 13 }}>
