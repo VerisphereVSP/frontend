@@ -1,9 +1,9 @@
 // frontend/src/contracts.ts
 // Provides contract addresses via React Query (fetched from backend /api/contracts).
 // Used by VSPMarketWidget and TradeModal which need dynamic/runtime contract data.
-// For static use in web3 hooks, import { EXPECTED_CHAIN_ID } from "./web3/chains";
-import FUJI_ADDRESSES from ./deployments/fuji instead.
+// For static use in web3 hooks, import FUJI_ADDRESSES from ./deployments/fuji instead.
 
+import { EXPECTED_CHAIN_ID } from "./web3/chains";
 import { useQuery } from "@tanstack/react-query";
 import type { ContractAddresses } from "@verisphere/protocol";
 import { setRuntimeAddresses } from "@verisphere/protocol";
