@@ -44,7 +44,7 @@ RUN set -e; \
     fi; \
     if [ -z "$VITE_CHAIN_ENV" ]; then \
       echo "FATAL(prod build): VITE_CHAIN_ENV is empty (code would default to 'fuji' — a mainnet footgun)." >&2; exit 1; \
-    fi; \
+    fi
 
 ENV VITE_API_BASE=$VITE_API_BASE \
     VITE_CHAIN_ENV=$VITE_CHAIN_ENV \
