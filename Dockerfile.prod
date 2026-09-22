@@ -14,13 +14,14 @@ FROM node:20-slim AS protocol-builder
 WORKDIR /protocol
 COPY core/out ../core/out
 COPY protocol/package*.json ./
-# production deps only: the SDK's devDependencies pin a different wagmi major, and a
-# second wagmi copy under /protocol/node_modules breaks the app's WagmiProvider context
-RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm install
 COPY protocol/src ./src
 COPY protocol/script ./script
 COPY protocol/tsconfig.json ./
 RUN npm run build
+# evict the SDK's dev-pinned wagmi/react after building: the frontend supplies them
+# (Vite dedupe enforces a single copy either way; this keeps the image honest)
+RUN rm -rf node_modules/wagmi node_modules/@wagmi node_modules/react node_modules/react-dom
 
 # -- Stage 2: static SPA build -----------------------------------------------
 FROM node:20-slim AS frontend-builder
