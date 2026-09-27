@@ -10,8 +10,10 @@ export default function VSBar({ vs, width = 56, height = 20 }: { vs: number; wid
   const red = "#dc2626";
   const gray = "#d1d5db";
   const fillColor = isPos ? green : isNeg ? red : gray;
-  // When fill is wide enough, white text inside. Otherwise, colored text outside.
-  const labelInside = absVs > 35;
+  // When the FILLED REGION is wide enough in pixels for the label, white text inside; otherwise
+  // colored text outside. (patch_game_b_fe: the old |vs| > 35 rule clipped "+50.0%" in the 56px bar —
+  // the "+" read as "-" and the "%" spilled out. A 6-char label needs ~40px at this font.)
+  const labelInside = (width * fillPct) / 100 >= 44;
   const textColor = labelInside ? "#fff" : fillColor;
   const label = `${clamped > 0 ? "+" : ""}${clamped.toFixed(1)}%`;
   return (

@@ -246,7 +246,6 @@ export default function InlineClaimCard({
           post_id: resolvedPid,
           text,
           verity_score: verityScore,
-          base_vs: verityScore,
           stake_support: stakeSupport,
           stake_challenge: stakeChallenge,
           total_stake: stakeSupport + stakeChallenge,

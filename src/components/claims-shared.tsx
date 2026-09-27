@@ -16,8 +16,7 @@ export type Claim = {
   post_id: number;
   text: string;
   creator?: string;
-  verity_score: number;
-  base_vs: number;
+  verity_score: number; // the one score a post has (whitepaper v17 §4.1); base VS is internal
   stake_support: number;
   stake_challenge: number;
   total_stake: number;
@@ -402,7 +401,6 @@ export function ExpandedClaimDetail({
                 post_id: m.post_id,
                 text: m.text || "",
                 verity_score: m.verity_score || 0,
-                base_vs: m.verity_score || 0,
                 stake_support: m.support || 0,
                 stake_challenge: m.challenge || 0,
                 total_stake: (m.support || 0) + (m.challenge || 0),
