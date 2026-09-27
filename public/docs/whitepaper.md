@@ -1,6 +1,6 @@
 # Verisphere: A Truth-Staking Protocol
-### White Paper — v16.2 (September 2026)
-**Date:** July 2026
+### White Paper — v17.0 (September 2026)
+**Date:** September 2026
 **Contact:** info@verisphere.co
 
 > **Scope.** This paper describes the Verisphere **protocol** only: the on-chain
@@ -82,10 +82,10 @@ Stakes may be withdrawn at any time, in any amount up to the user's current lot 
 
 Each lot accrues or loses value once per snapshot period (default: one day), **prorated by the share of the settlement window it was present for**: a lot that entered partway through the window earns or loses `delta × present / windowLength`. A lot's entry time is amount-weighted across top-ups (an addition ages the lot toward "now" in proportion to its size), so capital added seconds before a boundary earns seconds' worth, and a stake earns from the moment it is placed rather than from the next boundary. The rate itself is determined by:
 
-1. **Truth pressure** — the verity magnitude (`|2A − T| / T`) determines the base strength of the economic force. When VS is exactly neutral (equal support and challenge), no economic effect occurs.
-2. **Post size (participation)** — the post's total stake relative to a global reference (`sMax`) scales the rate. Larger posts face greater pressure. The factor is `participation = T / sMax`.
+1. **Truth pressure** — the verity magnitude is taken from the post's **effective pool** (Section 4.2.3): `verity = |S − C| / (S + C)`, where `S` is direct support plus incoming evidence in support and `C` is direct challenge plus incoming evidence against. The side that accrues is the side the effective pool favors (`S > C` → support). Evidence therefore moves money: a claim whose credible evidence outweighs its direct support pays its challengers and decays its supporters, whatever the direct stake ratio. When the effective pool is balanced (`S = C`), no economic effect occurs.
+2. **Post size (participation)** — the post's **direct** total stake relative to a global reference (`sMax`) scales the rate: `participation = T / sMax` with `T = A + D`. Evidence changes which side wins and by how much, not how large the post is.
 3. **Position weight** — each lot's weight is a continuous function of its weighted position in its side queue: `positionWeight = 1 − (lot.weightedPosition / sideTotal)`. Because positions are midpoints, a sole staker on a side has `weightedPosition = amount / 2` and therefore `positionWeight = 1/2`; the first of many earlier stakers (those with small `cumBefore`) earns close to the full rate, while later additions earn proportionally less.
-4. **Governed bounds** — the annual rate is bounded between `rMin` and `rMax`, both governance-configurable. The current deployment uses 0% minimum and 100% maximum.
+4. **Governed bounds** — the annual rate is bounded between `rMin` and `rMax`, both governance-configurable. The current deployment uses 0% minimum and a maximum of 100% APY compounded daily (`rMax = 365 × (2^(1/365) − 1) ≈ 0.6938` as a simple annual rate; a lot at full verity, participation and position weight doubles in a year when settled every epoch).
 
 The base per-epoch rate (in RAY units, where RAY = 1e18) is:
 
@@ -93,7 +93,9 @@ The base per-epoch rate (in RAY units, where RAY = 1e18) is:
 rBase = rMin + (rMax − rMin) × verity × participation
 ```
 
-Where `verity = |2A − T| × RAY / T` and both `rMin` and `rMax` have already been scaled from annual to per-epoch by the elapsed time (`× EPOCH_LENGTH × epochsElapsed / YEAR_LENGTH`).
+Where `verity = |S − C| × RAY / (S + C)` over the effective pool and both `rMin` and `rMax` have already been scaled from annual to per-epoch by the elapsed time (`× EPOCH_LENGTH × epochsElapsed / YEAR_LENGTH`). Catch-up settlement over several elapsed epochs applies the scaled rate once, without compounding; a post settled every epoch compounds daily.
+
+**Settlement reads the graph live.** A post's effective pool is computed at the moment it settles, from the current state of its ancestors (Section 4.2), with all stake quantities time-weighted over the settlement window. There is no cached score and no scheduled snapshot that could be timed against. Because the computation walks the post's ancestry, a settlement may exceed the gas a user transaction carries; in that case `stake()`/`withdraw()` revert with `SettleFirst(postId)` and the post is settled by the permissionless `updatePost()` (a keeper runs a settlement pass each epoch, parents before children). Settlement never falls back to the direct ratio and never uses a stale value. Contributions cut by the cycle rule or the depth limit (Section 4.3) are zero *by definition* and settle as such; a post's pool is deterministic for that post, so a cycle anywhere above it can never prevent it from settling.
 
 Each lot's per-epoch change is then computed independently — there is no side-wide budget redistribution. For each lot:
 
@@ -113,26 +115,23 @@ For the full normative specification, see `claim-spec-evm-abi.md`, Appendix A.
 
 ## 4. Verity Score
 
-### 4.1 Base Verity Score
+### 4.1 Base Verity Score (internal)
 
-The base Verity Score reflects the direct stake ratio on a post.
+The base Verity Score is the direct stake ratio on a post. It is an **internal quantity**: the protocol uses it only to gauge a link's credibility (Section 4.2.2, step 3). The score a post *has* — shown, ranked, propagated, and paid on — is the effective Verity Score of Section 4.2; for a post with no incoming evidence the two coincide.
 
 Let `A` = total support stake, `D` = total challenge stake, `T = A + D`.
 
 ```
-If A > D:   baseVS = +(A / T) × RAY
-If D > A:   baseVS = −(D / T) × RAY
-If A = D:   baseVS = 0
-If T = 0:   baseVS = 0
+baseVS = (A − D) / T × RAY          (0 if T = 0)
 ```
 
-Where `RAY = 10^18` (fixed-point scaling). The VS is clamped to `[−RAY, +RAY]`, corresponding to the range [−100%, +100%].
+Where `RAY = 10^18` (fixed-point scaling). The VS is clamped to `[−RAY, +RAY]`, corresponding to the range [−100%, +100%]. Base and effective VS are on the same scale: a post with 4 VSP support and 1 VSP challenge reads +60% whether it is scored directly or through the pool.
 
-A post is considered **active** when its total stake meets or exceeds the activity threshold (governance-configurable, defaults to the posting fee). Inactive posts have no effect on other posts' effective VS.
+A post is considered **active** when its total stake meets or exceeds the activity threshold (governance-configurable, defaults to the posting fee). An inactive post has no Verity Score (it reads 0) and contributes nothing to any other post. Links are posts and are subject to the same rule.
 
 ### 4.2 Effective Verity Score
 
-The effective Verity Score of a claim incorporates evidence from incoming links. Link contributions are **stake-weighted**: the parent claim's economic mass flows through the link to the child, not merely a percentage adjustment. This means the total stake on a parent claim determines how much influence it can exert through its evidence links.
+The effective Verity Score of a claim incorporates evidence from incoming links. **A contribution is stake.** One VSP of evidence arriving through a link acts on the child exactly as one VSP staked directly on that side would: it enters the child's pool, it cancels against the other side in the numerator, and it counts in the denominator. There is no cap on evidence and no discount for it; the only dilution is that a parent's mass is split across its outgoing links by stake share. Because the effective pool is also what settlement pays on (Section 3.2), evidence moves money, and every stake quantity that enters a contribution is **time-weighted over the settlement window** — a parent stake present for half the window contributes half its mass, exactly as a direct lot is prorated by presence. Evidence therefore cannot be flashed in for a settlement and withdrawn after; it is priced for as long as it stands, wherever it stands.
 
 #### 4.2.1 Credibility Gate
 
@@ -158,7 +157,7 @@ The parent's economic mass represents its stake-weighted credibility:
 parentMass = parentEffectiveVS × parentTotalStake / RAY
 ```
 
-Where `parentEffectiveVS` is in the range `(0, RAY]` (always positive due to the credibility gate) and `parentTotalStake` is in token units (wei). The result is in token units and represents how much economic weight the parent carries.
+Where `parentEffectiveVS` is in the range `(0, RAY]` (always positive due to the credibility gate) and `parentTotalStake` is the parent's direct total stake in token units (wei), **time-weighted over the window** (Section 4.2.5). The result is in token units and represents how much economic weight the parent carries.
 
 **Step 2: Distribute across outgoing links.**
 
@@ -168,7 +167,7 @@ A parent's mass is distributed among its outgoing links in proportion to their s
 linkShare = linkStake / sumOutgoingLinkStake
 ```
 
-Where `sumOutgoingLinkStake` is the sum of total stake across all active outgoing links from P.
+Where `sumOutgoingLinkStake` is the sum of total stake across all active outgoing links from P. Link stakes are time-weighted like all other stake quantities in this section.
 
 **Step 3: Apply link credibility.**
 
@@ -204,9 +203,9 @@ pool = totalSupport + totalChallenge
 effectiveVS = (totalSupport - totalChallenge) / pool × RAY
 ```
 
-The result is clamped to `[−RAY, +RAY]`.
+The result is clamped to `[−RAY, +RAY]`. This is the post's Verity Score: the number displayed, the number that ranks it, the number that propagates through its outgoing links, and — as `(S, C)` — the number that determines which side accrues and how fast (Section 3.2). Evidence for and against a claim cancel in the numerator and remain in the pool, exactly like direct stakes on opposite sides: equal evidence on both sides makes a claim read as contested, not as certain.
 
-#### 4.2.4 Example
+#### 4.2.4 Examples
 
 Claim A has 2 VSP support (VS = +100%). Claim B has 1 VSP support (VS = +100%). A challenges B via a link with 2 VSP support (link VS = +100%).
 
@@ -219,7 +218,18 @@ Claim A has 2 VSP support (VS = +100%). Claim B has 1 VSP support (VS = +100%). 
 - pool = 3.0
 - effectiveVS(B) = (1.0 - 2.0) / 3.0 = **-33.3%**
 
-The claim with 1 VSP support is pushed negative by the 2 VSP challenger. To defend B, participants can: add direct support to B, challenge claim A (reducing its VS and therefore its mass), or challenge the link itself (reducing its VS to silence it).
+The claim with 1 VSP support is pushed negative by the 2 VSP challenger, and from its next settlement B's supporters decay while direct challengers of B accrue. To defend B, participants can: add direct support to B, challenge claim A (reducing its VS and therefore its mass), or challenge the link itself (reducing its VS to silence it).
+
+**Mixed evidence.** Claim C has 2 VSP direct support. One credible 1-VSP parent supports it through a 1-VSP link (+1.0) and another credible 1-VSP parent challenges it through a 1-VSP link (−1.0).
+
+- totalSupport = 2.0 + 1.0 = 3.0; totalChallenge = 0 + 1.0 = 1.0; pool = 4.0
+- effectiveVS(C) = (3.0 − 1.0) / 4.0 = **+50%**
+
+The two contributions cancel in the numerator and both remain in the pool: C reads as a contested +50%, not as an unchallenged +100%, and it settles at half the truth pressure it would have without the challenge.
+
+#### 4.2.5 Time-Weighted Stake
+
+Every post keeps, per side, a running accumulator of `total × seconds` that is advanced on each stake change. A settlement window's time-weighted total is the accumulated area over the window divided by the window length. The score a post *displays* is the instantaneous pool — the same formula evaluated on current totals — while the score it *settles on* is the window average of that pool; the two agree whenever the graph has been still for the window. Parent totals, link stakes, and outgoing-link sums in Sections 4.2.2–4.2.3 are all taken time-weighted. This is the same proration rule that applies to a direct lot (Section 3.2) applied to evidence, so that a VSP is counted for exactly as long as it is committed, whether it sits on the post or on its evidence.
 
 ### 4.3 Cycle Handling
 
@@ -253,7 +263,7 @@ This ensures:
 
 ### 5.1 VSP Token
 
-VSP is the native ERC-20 token of the protocol, deployed on Avalanche C-Chain. Mint and burn authority is held through an Authority contract and restricted to the protocol's StakeEngine; the token's supply cap is fixed at the genesis amount, so no party — including governance — can mint beyond it. VSP supports ERC-2612 permit, enabling gasless approvals.
+VSP is the native ERC-20 token of the protocol, deployed on Avalanche C-Chain. Mint and burn authority is held through an Authority contract and restricted to the protocol's StakeEngine; the token's supply cap is fixed at the genesis amount, so no discretionary party — including governance — can mint beyond it; only the StakeEngine's rate-bounded accrual (Section 3.2) mints, and it is exempt from the cap by construction so that earned gains are never withheld. VSP supports ERC-2612 permit, enabling gasless approvals.
 
 ### 5.2 Posting Fee
 
@@ -274,8 +284,9 @@ The mint and burn of VSP that back stake accrual and decay are performed under t
 settlement runs on-chain, inside ordinary protocol transactions (stakes,
 withdrawals, updates): the StakeEngine mints to accruing lots and burns from
 decaying ones according to the rules in §3.2. No off-chain process holds any
-minting authority; the only off-chain component is a keeper that periodically calls
-the permissionless `refreshSMax()`. Role assignments are governed as described in
+minting authority; the only off-chain components are keepers that call the
+permissionless `updatePost()` (an epoch settlement pass, parents before children) and
+`refreshSMax()`. Anyone may call either. Role assignments are governed as described in
 §6.2 and are revocable by governance.
 
 ### 5.4 Supply
@@ -285,7 +296,7 @@ deployment and is held by the operating company's treasury. The supply cap is fl
 and equal to the genesis amount: the deployed code permits no further discretionary
 minting by anyone, including the company and governance. Thereafter, total supply
 changes only through the StakeEngine's staking mechanics — symmetric, rate-bounded
-accrual and decay — and the burning of posting fees. No portion of the treasury was
+accrual and decay, which are exempt from the cap — and the burning of posting fees. No portion of the treasury was
 locked at genesis; if the company places treasury supply under an on-chain vesting
 contract, it will publish the contract address and release schedule.
 
@@ -344,12 +355,14 @@ contracts remain deployer-owned and the deployment is provisional.
 is a property of a test environment, not of the protocol as deployed for real use.)
 
 Through this timelocked, Safe-controlled governance, the following may be modified:
-- Posting fee amount
-- Staking rate bounds (min and max APR)
-- Activity threshold
-- Snapshot period and ScoreEngine fan-in limits
-- Contract implementations (via UUPS proxy upgrades)
+- Posting fee amount, staking rate bounds (min and max APR), and activity threshold (via the ProtocolPolicy contract; the policy contract itself can be replaced)
+- Snapshot period, `sMax` decay rate and maximum decay epochs, and ScoreEngine fan-in/fan-out limits
+- The Guardian address (pause-only role) and the resumption of a paused contract (`unpause`)
+- Contract implementations (via UUPS proxy upgrades) and contract wiring (registry, link graph, policy addresses)
+- Housekeeping operations: compaction of exhausted lots, re-scan of the `sMax` tracker, claim-hash backfill
 - Authority roles
+
+Nothing else is reachable by governance; in particular there is no path to mint, to move a user's stake, or to change the supply cap.
 
 ---
 
@@ -370,6 +383,13 @@ Claims never "resolve." The Verity Score is a continuous, live signal that refle
 ### 7.4 Adversarial
 
 The protocol is designed for adversarial participants. There is no assumption of good faith. Economic incentives align with truthful behavior: being right is profitable; being wrong is costly. The credibility gate (Section 4.2.1) ensures that discredited claims cannot be weaponized through the evidence graph. The protocol does not enforce truth — it creates conditions under which truth is economically favored.
+
+Because evidence moves money (Section 3.2), the evidence graph is itself a battleground, and the protocol's answer is the same at every node:
+
+- **Fabricated parents.** An attacker can create claims, stake them uncontested, and link them against a target; the mass reaching the target is stake-for-stake, so flipping a claim costs its direct stake in parent stake. The parents are ordinary claims: challenging a false parent is profitable, flips it, and silences its links through the credibility gate. Every evidence dispute is a claim dispute one level up.
+- **Self-contention.** A parent linked to the same child with both polarities dilutes the child's score without taking a losing position. This is priced exactly as opposing direct stakes would be and is visible in the graph; the counters are to challenge the parent or either link.
+- **Flash evidence.** Stake placed on a parent just before a child settles and withdrawn after would count for the whole window if evidence were read at an instant. It is not: all evidence quantities are time-weighted over the window (Section 4.2.5), so evidence is priced for as long as it stands, like any lot.
+- **Ancestry bloat.** Settlement walks a post's ancestry, bounded by the fan-in limit ranked by link stake: to inflate a claim's ancestry an attacker must out-stake its real evidence at every level. Oversized settlements are routed to the keeper (`SettleFirst`), never skipped.
 
 ---
 

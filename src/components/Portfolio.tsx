@@ -450,7 +450,6 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
                         text: p.text,
                         creator: p.creator,
                         verity_score: p.verity_score,
-                        base_vs: p.verity_score,
                         stake_support: p.pool_support,
                         stake_challenge: p.pool_challenge,
                         total_stake: displayedPoolTotal,

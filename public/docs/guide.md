@@ -153,7 +153,7 @@ If someone challenges a claim you support, you can:
 
 Your earning rate depends on four factors:
 
-1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings.
+1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily).
 2. **Post Size** — Larger total stakes face stronger pressure. Your claim's total stake relative to the system-wide reference (`sMax`).
 3. **Queue Position** — Earlier stakers earn more. Your position weight is based on where you entered the queue: `positionWeight = 1 − (yourPosition / sideTotal)`, where `yourPosition` is the midpoint of your share of the side total. A sole staker on a side earns at half the base rate; the first of many earlier stakers approaches the full rate; later entries earn progressively less. An individual lot's effective rate never exceeds the base rate.
 4. **Rate Bounds** — Earning rates scale from 0% (at VS = 0) up to a maximum of 100% APR.
