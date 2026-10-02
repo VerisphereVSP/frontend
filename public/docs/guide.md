@@ -153,7 +153,7 @@ If someone challenges a claim you support, you can:
 
 Your earning rate depends on four factors:
 
-1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily).
+1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily), and evidence is read from the **last settlement** of the source claim and the link: new or changed evidence is counted from the next daily settlement, one hop per day.
 2. **Post Size** — Larger total stakes face stronger pressure. Your claim's total stake relative to the system-wide reference (`sMax`).
 3. **Queue Position** — Earlier stakers earn more. Your position weight is based on where you entered the queue: `positionWeight = 1 − (yourPosition / sideTotal)`, where `yourPosition` is the midpoint of your share of the side total. A sole staker on a side earns at half the base rate; the first of many earlier stakers approaches the full rate; later entries earn progressively less. An individual lot's effective rate never exceeds the base rate.
 4. **Rate Bounds** — Earning rates scale from 0% (at VS = 0) up to a maximum of 100% APR.
@@ -173,8 +173,11 @@ A claim needs at least 1 VSP total stake to be "active" and influence other clai
 ### Credibility Gate
 Only claims with VS > 0 can influence other claims through evidence links. A discredited claim (VS ≤ 0) is inert in the evidence graph until rehabilitated.
 
+### Settlement
+Once a day every claim and link **settles**: its positions gain or lose for the day, and it records a snapshot of its stake and score. A claim's evidence is read from those snapshots, so what you see next to an evidence link — its **Effect** — is the contribution as of the last settlement of that link and its source claim. Evidence you add today counts from tomorrow's settlement; a change deeper in the graph arrives one hop per day. Settlement is permissionless and the network runs it for every post shortly after each daily boundary; if a transaction answers "being settled by the network — please retry in a moment", the network is doing exactly that, and the retry goes through.
+
 ### Conservation of Influence
-A claim's influence is distributed — not duplicated — across its outgoing links. Creating more links from the same claim dilutes each link's share. The protocol caps the number of outgoing links it counts (currently 64): if a claim has more than that, only the top 64 by stake actually contribute. Spam links beyond the cap have zero effect.
+A claim's influence is distributed — not duplicated — across its outgoing links, in proportion to the stake on each link. Creating more links from the same claim dilutes each link's share. On the receiving side, a claim counts its 64 most-staked eligible incoming links; links beyond those have no effect, so flooding a claim with weak links does nothing.
 
 ### Single-Sided Positions
 You can only hold a position on one side of any given claim at a time. To flip from support to challenge (or vice versa), set a signed target on the opposite side — the protocol withdraws the old position and opens the new one in a single transaction. Flipping closes your old lot entirely; the new position starts at the back of the destination side's queue.
@@ -198,7 +201,7 @@ You can only hold a position on one side of any given claim at a time. To flip f
 ## Tips
 
 - **Start small.** Stake 1 VSP to learn how the system works before committing more.
-- **Check the evidence graph.** A claim might look safe but have a strong incoming challenge link that's about to flip its VS.
+- **Check the evidence graph.** A claim might look safe but have a strong incoming challenge link that's about to flip its VS — evidence placed today shows its Effect from tomorrow's settlement.
 - **Queue position matters.** Being first to stake on a new claim gives you the best earning rate.
 - **Links are cheaper plays.** Staking on a link lets you influence a claim's VS without competing in a large direct stake pool.
 - **Watch the Portfolio.** Your Portfolio page shows real-time APR, position status, and the factors behind your earnings.
@@ -220,6 +223,9 @@ Verisphere handles gas fees for you through meta-transactions. If a transaction 
 
 ### I can't find my position
 Check the **Portfolio** tab. All your active stakes appear there with their current VS, APR, and status.
+
+### "This post is being settled by the network — please retry in a moment"
+Your transaction arrived while the post, or evidence it depends on, still had a daily settlement outstanding. The network settles it within moments; resubmit and it goes through. Nothing was charged.
 
 ### "Cannot stake on opposite side"
 You already have a stake on the other side of this claim. Withdraw it first (set your target to 0), then stake on the new side.
