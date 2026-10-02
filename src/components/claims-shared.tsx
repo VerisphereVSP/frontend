@@ -16,7 +16,7 @@ export type Claim = {
   post_id: number;
   text: string;
   creator?: string;
-  verity_score: number; // the one score a post has (whitepaper v17 §4.1); base VS is internal
+  verity_score: number; // the one score a post has (whitepaper v18 §4.1); base VS is internal
   stake_support: number;
   stake_challenge: number;
   total_stake: number;
@@ -651,8 +651,13 @@ export function ExpandedClaimDetail({
               <div style={{ fontSize: 11, color: S.red, textAlign: "right", padding: "0 4px" }}>
                 {(e.link_challenge ?? 0).toFixed(1)}
               </div>
-              {/* Link effect (spans Links in + Links out columns) */}
-              <div style={{ fontSize: 9, color: S.textFaint, textAlign: "right", padding: "0 2px", gridColumn: "span 2" }}>
+              {/* Link effect (spans Links in + Links out columns). patch_settlement_snapshots (whitepaper
+                  v18 §4.2.6): the contract reads this from the last settlement of the link and its source
+                  claim, so new or changed evidence shows from the next daily settlement. */}
+              <div
+                style={{ fontSize: 9, color: S.textFaint, textAlign: "right", padding: "0 2px", gridColumn: "span 2" }}
+                title="Effect on the target's score as of the last daily settlement of this link and its source claim. New or changed evidence counts from the next settlement."
+              >
                 Effect {effectStr}
               </div>
               {/* Controversy placeholder */}
