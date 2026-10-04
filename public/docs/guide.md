@@ -153,7 +153,7 @@ If someone challenges a claim you support, you can:
 
 Your earning rate depends on four factors:
 
-1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily), and evidence is read from the **last settlement** of the source claim and the link: new or changed evidence is counted from the next daily settlement, one hop per day.
+1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily), and evidence is read from the **last settlement** of the source claim and the link: new or changed evidence is counted from the next daily settlement, one hop per day, once it has stood for at least **1 VSP-day** (see Settlement below).
 2. **Post Size** — Larger total stakes face stronger pressure. Your claim's total stake relative to the system-wide reference (`sMax`).
 3. **Queue Position** — Earlier stakers earn more. Your position weight is based on where you entered the queue: `positionWeight = 1 − (yourPosition / sideTotal)`, where `yourPosition` is the midpoint of your share of the side total. A sole staker on a side earns at half the base rate; the first of many earlier stakers approaches the full rate; later entries earn progressively less. An individual lot's effective rate never exceeds the base rate.
 4. **Rate Bounds** — Earning rates scale from 0% (at VS = 0) up to a maximum of 100% APR.
@@ -168,13 +168,15 @@ Winners (your side aligns with the VS direction) earn at this rate. Losers (oppo
 Creating a claim or link costs **1 VSP**, which is permanently burned. This prevents spam and gives every new claim an initial positive VS.
 
 ### Activity Threshold
-A claim needs at least 1 VSP total stake to be "active" and influence other claims through links.
+A claim or link needs at least 1 VSP of stake, averaged over the day, to be "active" for that day's settlement and influence other claims (see the presence bar under Settlement).
 
 ### Credibility Gate
 Only claims with VS > 0 can influence other claims through evidence links. A discredited claim (VS ≤ 0) is inert in the evidence graph until rehabilitated.
 
 ### Settlement
-Once a day every claim and link **settles**: its positions gain or lose for the day, and it records a snapshot of its stake and score. A claim's evidence is read from those snapshots, so what you see next to an evidence link — its **Effect** — is the contribution as of the last settlement of that link and its source claim. Evidence you add today counts from tomorrow's settlement; a change deeper in the graph arrives one hop per day. Settlement is permissionless and the network runs it for every post shortly after each daily boundary; if a transaction answers "being settled by the network — please retry in a moment", the network is doing exactly that, and the retry goes through.
+Once a day every claim and link **settles**: its positions gain or lose for the day, and it records a snapshot of its stake and score. A claim's evidence is read from those snapshots, so what you see next to an evidence link — its **Effect** — is the contribution as of the last settlement of that link and its source claim. A change deeper in the graph arrives one hop per day.
+
+**The presence bar.** A link or claim counts in a day only if its stake, averaged over that day, is at least the activity threshold of 1 VSP — in other words, at least **1 VSP-day of presence**: 1 VSP standing the whole day, 2 VSP for half a day, 4 VSP for six hours. So a 1-VSP link placed at noon counts from the settlement *after* next (its first full day), while a 2-VSP link placed at noon counts at the very next one. This is what stops anyone from staking a link for the last minutes of a day and having it count for the whole day. Settlement is permissionless and the network runs it for every post shortly after each daily boundary; if a transaction answers "being settled by the network — please retry in a moment", the network is doing exactly that, and the retry goes through.
 
 ### Conservation of Influence
 A claim's influence is distributed — not duplicated — across its outgoing links, in proportion to the stake on each link. Creating more links from the same claim dilutes each link's share. On the receiving side, a claim counts its 64 most-staked eligible incoming links; links beyond those have no effect, so flooding a claim with weak links does nothing.
@@ -201,7 +203,7 @@ You can only hold a position on one side of any given claim at a time. To flip f
 ## Tips
 
 - **Start small.** Stake 1 VSP to learn how the system works before committing more.
-- **Check the evidence graph.** A claim might look safe but have a strong incoming challenge link that's about to flip its VS — evidence placed today shows its Effect from tomorrow's settlement.
+- **Check the evidence graph.** A claim might look safe but have a strong incoming challenge link that's about to flip its VS — evidence shows its Effect from the first settlement after it has stood for 1 VSP-day.
 - **Queue position matters.** Being first to stake on a new claim gives you the best earning rate.
 - **Links are cheaper plays.** Staking on a link lets you influence a claim's VS without competing in a large direct stake pool.
 - **Watch the Portfolio.** Your Portfolio page shows real-time APR, position status, and the factors behind your earnings.
