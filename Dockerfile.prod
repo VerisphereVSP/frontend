@@ -7,7 +7,9 @@
 #                            analogue of the smoke-harness wiring check (Vite
 #                            inlines import.meta.env at build time, so this is the
 #                            only place to catch a broken projectId before it ships).
-# Stage 3 caddy            : serve the static dist + reverse-proxy /api + TLS + CSP.
+# Stage 3 caddy            : serve the static dist + reverse-proxy /api + TLS + CSP,
+#                            and the landing page (www/ checkout -> /srv/landing;
+#                            Caddyfile serves it at the apex, the SPA at app.<site>).
 
 # -- Stage 1: protocol -------------------------------------------------------
 FROM node:20-slim AS protocol-builder
@@ -59,6 +61,20 @@ RUN npm run build
 # -- Stage 3: Caddy edge -----------------------------------------------------
 FROM caddy:2-alpine
 COPY --from=frontend-builder /frontend/dist /srv
+# patch_edge_landing_apphost: the landing page is the www checkout at the repo root
+# (gitignored there; a sibling clone of VerisphereVSP/www). The root .dockerignore
+# strips its .git. CNAME is GitHub-Pages metadata and must not be served. A missing
+# www/ fails this COPY loudly — clone it before building (ROLLOUT-CHECKLIST).
+COPY www/ /srv/landing/
+RUN rm -f /srv/landing/CNAME && test -s /srv/landing/index.html && ! test -e /srv/landing/.git
 COPY ops/caddy/Caddyfile /etc/caddy/Caddyfile
+# Fail the build, not the rollout, on a Caddyfile Caddy would refuse at start.
+# Env-dependent pieces take the staging defaults here; prod validates again with
+# its own env before `up -d` (PROD-EDGE-ROLLOUT). Validation under local_certs mints
+# a throwaway internal CA, so it runs against a scratch dir removed in the same layer:
+# no key material is baked into the image.
+RUN set -e; XDG_DATA_HOME=/tmp/cv XDG_CONFIG_HOME=/tmp/cv VSP_CADDY_GLOBAL=local_certs \
+      caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; \
+    rm -rf /tmp/cv; ! test -e /data/caddy/pki
 EXPOSE 80 443
 # caddy:2-alpine default entrypoint: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
