@@ -1,233 +1,220 @@
 # How to Play Verisphere
 
-## What is Verisphere?
+<!-- patch_guide_v2 -->
 
-Verisphere is a truth-staking protocol where you back factual claims with real VSP tokens. If you're right, you earn. If you're wrong, you lose. The community decides what's credible through economic consensus — not votes, not likes, not algorithms.
+Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. If the claim holds up, you earn; if it doesn't, you lose. What counts as credible is decided by what people are willing to stake, not by votes or likes.
+
+This guide takes you from nothing to your first stake. If you have never used a crypto wallet, budget about **45 minutes** the first time — most of it waiting for an exchange. After that, every action takes seconds.
+
+**What you will need**
+
+- A desktop browser (Chrome, Firefox, Brave or Edge) with the MetaMask extension.
+- A little **AVAX**, the Avalanche network's own coin — **0.05 AVAX is plenty**. AVAX pays the network fee ("gas") for the two transactions you confirm when you buy VSP, and again when you sell it. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free.
+- Some **USDC**, a dollar-pegged stablecoin, to buy VSP with. A few dollars is enough to start.
 
 ---
 
-## Setting Up
+## Part 1 — Set up your wallet
 
-### 1. Install MetaMask
+### Step 1. Install MetaMask
 
-MetaMask is a browser wallet that lets you interact with Verisphere. If you already have MetaMask installed, skip to step 2.
+1. Go to [metamask.io/download](https://metamask.io/download/) and install the extension for your browser. Only install from that address.
+2. Open it and choose **Create a new wallet**.
+3. Write your **Secret Recovery Phrase** (12 words) on paper and keep it somewhere safe. It is the only way to recover the wallet; anyone who has it has your funds. Never type it into a website and never share it.
+4. Set a password. You are now looking at an empty wallet on "Ethereum Mainnet".
 
-1. Go to [metamask.io](https://metamask.io) and click **Download**.
-2. Install the extension for your browser (Chrome, Firefox, Brave, or Edge).
-3. Follow the setup wizard to create a new wallet.
-4. **Write down your seed phrase** and store it somewhere safe. This is the only way to recover your wallet. Never share it with anyone.
+Your wallet **address** is the `0x…` string at the top of MetaMask. Click it to copy. You will paste it into an exchange in Step 3.
 
-### 2. Add the Avalanche Network
+### Step 2. Add the Avalanche network
 
-Verisphere runs on Avalanche C-Chain. MetaMask needs to know about this network.
+Verisphere runs on **Avalanche C-Chain**. MetaMask has to be told about it once.
 
-1. Open MetaMask and click the network dropdown at the top (it says "Ethereum Mainnet" by default).
-2. Click **Add network** → **Add a network manually**.
-3. Enter the following details:
+Easiest: open [chainlist.org/chain/43114](https://chainlist.org/chain/43114), click **Connect Wallet**, then **Add to MetaMask**, and approve the two prompts ("Allow this site to add a network", "Switch network").
+
+Manual alternative: MetaMask → network menu (top left) → **Add network** → **Add a network manually**:
 
 | Field | Value |
 |-------|-------|
-| Network Name | Avalanche C-Chain |
+| Network name | Avalanche C-Chain |
 | RPC URL | https://api.avax.network/ext/bc/C/rpc |
 | Chain ID | 43114 |
-| Currency Symbol | AVAX |
-| Block Explorer | https://snowtrace.io |
+| Currency symbol | AVAX |
+| Block explorer | https://snowtrace.io |
 
-4. Click **Save** and switch to the Avalanche C-Chain network.
+Check: the network menu now reads **Avalanche C-Chain**. Stay on it for everything that follows.
 
-Alternatively, visit [chainlist.org](https://chainlist.org/?search=avalanche), find "Avalanche C-Chain", and click **Add to MetaMask** for automatic setup.
+### Step 3. Get AVAX and USDC into your wallet
 
-### 3. Get USDC on Avalanche
+You need both. **AVAX** pays the gas when you buy or sell VSP; **USDC** is what you spend on VSP. The simplest route is one exchange account that withdraws to Avalanche.
 
-You need USDC (a stablecoin pegged to the US dollar) on Avalanche to buy VSP tokens. There are several ways to get USDC on Avalanche:
+1. Create an account on an exchange that supports Avalanche C-Chain withdrawals — for example [Coinbase](https://www.coinbase.com), [Kraken](https://www.kraken.com) or [Binance](https://www.binance.com). Identity verification can take minutes to a few days.
+2. Buy a little **AVAX** (0.1 AVAX is more than enough) and the **USDC** you want to play with.
+3. **Withdraw AVAX** to your MetaMask address. In the withdrawal form choose network **Avalanche C-Chain** (sometimes shown as "Avalanche" or "AVAXC"). Confirm by e-mail or authenticator if the exchange asks.
+4. **Withdraw USDC** the same way — network **Avalanche C-Chain**. This is the step people get wrong: if you pick Ethereum, Solana or any other network, the USDC will not be in your Avalanche wallet.
+5. Wait. Withdrawals usually arrive in 2–15 minutes. New exchange accounts sometimes hold withdrawals for a few days after a bank deposit; the exchange shows a date if so.
+6. In MetaMask, AVAX shows automatically. To see USDC, go to **Tokens → Import tokens → Custom token** and paste the USDC contract `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E`; the symbol and 6 decimals fill in. (Avalanche also has an older bridged "USDC.e" — Verisphere uses the native one above.)
 
-**Option A: Buy directly on an exchange that supports Avalanche withdrawals**
+Alternatives if you already hold crypto elsewhere: MetaMask's own **Buy** button sells AVAX by card in many countries (choose Avalanche as the network); [Circle's bridge](https://bridge.circle.com) moves USDC between Ethereum, Base and Avalanche; the [Core bridge](https://core.app/bridge/) moves other assets to Avalanche.
 
-1. Create an account on an exchange like Coinbase, Kraken, or Binance.
-2. Purchase USDC.
-3. Withdraw USDC to your MetaMask wallet address, selecting **Avalanche C-Chain** as the withdrawal network. This is important — if you select Ethereum or another network, your funds will not appear in Verisphere.
-4. Your MetaMask wallet address is the string starting with `0x` shown at the top of MetaMask. Click it to copy.
+### Step 4. Open the app and connect
 
-**Option B: Bridge from Ethereum**
+1. Go to [app.verisphere.co](https://app.verisphere.co).
+2. Click **Connect Wallet** (top right) and choose MetaMask. MetaMask opens: pick your account → **Next** → **Connect**. If it asks to switch to Avalanche C-Chain, approve that too.
+3. The header now shows your address, your VSP balance (0.00 for now) and the **Buy** and **Sell** buttons.
 
-If you already have USDC on Ethereum:
+Connecting is a permission, not a transaction: nothing moves and nothing is charged.
 
-1. Go to [core.app/bridge](https://core.app/bridge/) (Avalanche's official bridge).
-2. Connect your MetaMask wallet.
-3. Select USDC, choose "From Ethereum" → "To Avalanche", enter the amount, and confirm.
+### Step 5. Buy VSP
 
-**Option C: Buy AVAX and swap**
+VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it; the **Buy** button executes a swap on that pool from your own wallet — the site never holds your funds.
 
-1. Buy AVAX on any exchange and withdraw to your MetaMask wallet on Avalanche C-Chain.
-2. Use a decentralized exchange like [Trader Joe](https://traderjoexyz.com) or [Pangolin](https://pangolin.exchange) to swap AVAX for USDC.
+1. Click **Buy** in the header. The **Buy VSP** window opens. It shows your USDC balance and **Gas: … AVAX** — the AVAX you have for fees. If it says *"This wallet has no AVAX"*, finish Step 3 first.
+2. Type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance.
+3. Click **Preview Fill**. The window shows how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (the swap tolerates a 1 % price move while you confirm).
+4. Click **Buy … VSP**. MetaMask now opens **twice**:
+   - *"Approve in your wallet…"* — a request to let the pool take exactly this much USDC. Click **Confirm**. This is a real transaction: it uses a tiny amount of AVAX (a fraction of a cent) and confirms in about two seconds while the window says *"Waiting for approval…"*.
+   - *"Confirm the swap in your wallet…"* — the swap itself. Click **Confirm**. Another small AVAX fee, another two seconds (*"Swapping…"*).
+5. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, import it as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals.
 
-### 4. Connect to Verisphere
-
-1. Go to [verisphere.co](https://verisphere.co).
-2. Click **Connect Wallet** in the top right.
-3. MetaMask will pop up asking you to connect — approve it.
-4. You should see your wallet address and USDC balance in the header bar.
-
-You don't need AVAX for gas — Verisphere submits transactions for you through a relay. The relay deducts a small fee in VSP from each transaction (currently up to 0.5% of transaction value, with a small minimum). Plain VSP transfers and reads are not subject to the relay fee.
-
-### 5. Buy VSP Tokens
-
-1. Click **Buy** in the wallet bar.
-2. Enter the amount of USDC you want to spend.
-3. Confirm the transaction in MetaMask.
-4. VSP tokens appear in your balance immediately.
-
-VSP is the only token you need to play. You can sell VSP back to USDC at any time by clicking **Sell**.
+Every purchase asks for both confirmations (the approval covers exactly one swap). Gas on Avalanche is small: the two together cost well under 0.01 AVAX, so the 0.05 AVAX you brought covers many swaps.
 
 ---
 
-## Playing the Game
+## Part 2 — Your first actions
 
-### Explore a Topic
+### What a Verisphere action looks like
 
-Type any topic in the search bar — "climate change", "bitcoin", "quantum computing" — and Verisphere generates an article with factual claims. Each claim can be staked, challenged, and linked to evidence.
+Inside Verisphere you never pay gas and MetaMask never shows **Confirm**; it shows **Signature request** instead. A relay submits the transaction for you and takes a small fee **in VSP** — the app checks you hold at least 0.1 VSP for it before it starts. One action can ask for up to three signatures in a row:
 
-### Claims
+1. permission for the protocol to use the VSP you are staking (only the first time, or when the amount exceeds what you allowed before),
+2. permission to take the relay fee,
+3. the action itself.
 
-A **claim** is a factual assertion, like "Earth is a spheroid" or "The greenhouse effect is caused by atmospheric gases." Claims live on-chain permanently. Creating a claim costs **1 VSP** (burned as a fee) plus an initial stake.
+Read each one — it names the token and the amount — and click **Sign**. A progress box in the app then tracks the action ("Confirming … on chain"); it confirms in a few seconds and the page updates within about half a minute once the indexer has caught up. If you close MetaMask instead of signing, nothing happens and nothing is charged.
 
-### Staking
+Creating a claim or a link *with an opening stake* is two actions in a row — first the post, then the stake — so expect two rounds of signature requests.
 
-Every claim has two sides: **support** and **challenge**. You can only hold a position on **one side** of any given claim at a time — but you can switch sides in a single transaction by setting a signed target. The protocol handles the withdrawal of your old position and the opening of your new position atomically.
+### Find your way around
 
-- **Positive stake** (+1, +5, etc.) = stake in **support** (you believe the claim is true)
-- **Negative stake** (-1, -5, etc.) = stake in **challenge** (you believe the claim is false)
-- **Zero** = withdraw your entire position on this claim, regardless of which side it was on
+The header has four pages:
 
-Switching sides costs only the relay fee on the single transaction; you do not pay a separate posting fee, and you do not need to wait between the withdrawal and the new stake. Note that switching sides closes your old lot entirely — you start fresh at the back of the new side's queue, with no preserved positional advantage.
+- **Explore** — type a topic in the box ("State a claim or search a topic…"), for example "climate change" or "quantum computing". Verisphere writes an article made of factual claims, each one stakeable right there.
+- **Claims** — every claim and link on-chain, searchable, with its score, stake and evidence links. This is where you create links.
+- **Positions** — everything you have staked, with the score, rate and status of each position (connect your wallet to see it).
+- **Transactions** — the history of your actions, each with a link to the transaction on [snowtrace.io](https://snowtrace.io).
 
-Your stake earns or loses value over time based on the claim's **Verity Score (VS)**.
+### Stake on a claim
+
+1. Open a claim — in an article on **Explore** or from the **Claims** page.
+2. In the box **Your stake on this claim**, enter the amount of VSP you want to hold: **positive** to support (you think it's true), **negative** to challenge (you think it's false). `1` is a sensible first stake.
+3. Apply it, sign the requests, and wait for the progress box to finish.
+
+The number you enter is your *target* position, not an addition: entering `3` when you already hold `1` adds 2 VSP; entering `0` withdraws everything. You can hold a position on only **one side** of a claim. To switch sides, enter an amount with the other sign: the protocol closes the old position and opens the new one in a single action, and your new position starts at the back of that side's queue.
+
+### Create a claim
+
+A claim is one factual assertion, up to **1,000 characters**, stored on the blockchain permanently and visible to everyone under your address. It cannot be edited or deleted, and an identical claim (ignoring case and spacing) is rejected as a duplicate. Creating one costs a **1 VSP posting fee**, which is burned, plus whatever you stake on it.
+
+1. On **Explore**, open an article and click the **+** button.
+2. Write the claim ("Write a factual claim to add on-chain…"). Verisphere may suggest a tighter wording; keep yours or take the suggestion.
+3. Enter the **Initial stake** (in VSP, support) and click **Create & stake**. Sign the requests.
+
+Write a claim that could be wrong and that someone could check — "The Eiffel Tower is 330 metres tall", not "The Eiffel Tower is beautiful".
+
+### Link claims as evidence
+
+Evidence in Verisphere is a **link** from one claim to another, marked **Support** or **Challenge**: "CO₂ absorbs infrared" supports "The greenhouse effect is real". A link is a post of its own: it costs the same 1 VSP fee, carries its own stake, and has its own score. Staking on a link says "this evidence relationship is valid".
+
+1. On the **Claims** page open the claim the evidence is *about* and click **Incoming Links** (evidence for or against this claim). Or open the claim that *is* the evidence and click **Outgoing Links** (this claim as evidence for or against another).
+2. In the search box find the other claim, or **browse all claims** to pick it.
+3. Toggle **✦ Support** / **⚔ Challenge**, set the stake (1 VSP is the default), and create the link. Sign the requests — once for the link, once more for its stake.
+
+A link only affects its target while the source claim is credible (score above zero) and the link has enough stake standing (see the presence bar below).
+
+### Sell VSP and cash out
+
+1. Click **Sell** in the header. The **Sell VSP** window works exactly like buying: amount → **Preview Fill** → **Sell … VSP** → MetaMask **Confirm** twice (approve the VSP, then the swap). Two small AVAX fees.
+2. To move USDC back to an exchange, use MetaMask **Send**: paste the exchange's USDC deposit address *for Avalanche C-Chain* and send. Sending to an Ethereum deposit address loses the funds.
+
+Keep a little AVAX in the wallet for this; if MetaMask says "insufficient funds for gas", that is the AVAX balance, not your USDC or VSP.
+
+---
+
+## Part 3 — How the game works
 
 ### Verity Score (VS)
 
-The VS reflects economic consensus:
+Each claim shows a score between −100 % and +100 %:
 
-- **VS > 0%** → More support than challenge. Supporters earn, challengers lose.
-- **VS < 0%** → More challenge than support. Challengers earn, supporters lose.
-- **VS = 0%** → Contested or inactive. Nobody earns or loses.
+- **VS > 0** — more support than challenge. Supporters earn, challengers lose.
+- **VS < 0** — more challenge than support. Challengers earn, supporters lose.
+- **VS = 0** — contested or inactive. Nobody earns or loses.
 
-The VS is shown as a colored number next to each claim: green for positive, red for negative.
+The score that pays is the *effective* score: the claim's own stake **plus** its linked evidence, counted as of the last settlement.
 
-### Evidence Links
+### Settlement — once a day
 
-Claims don't exist in isolation. You can link one claim to another as **support** or **challenge**:
+Every claim and link settles once a day, shortly after **00:00 UTC**: positions gain or lose for the day, and the post records a snapshot of its stake and score. Evidence is read from those snapshots, so a new link affects its target from the next settlement, one hop per day.
 
-- "Earth is a spheroid" **challenges** "Earth is flat" → If the challenger is credible (VS > 0), it pushes the target's VS down.
-- "CO2 absorbs infrared" **supports** "Greenhouse effect is real" → Credible support pushes the target's VS up.
+**The presence bar.** A post counts in a day only if its stake averaged over that day is at least **1 VSP** — one VSP standing the whole day, two for half a day, four for six hours. A 1 VSP link placed at noon UTC counts from the settlement *after* next; a 2 VSP link placed at noon counts at the very next one. The bar under each post shows how far it is from counting.
 
-Links are also stakeable. Staking on a link means "I believe this evidence relationship is valid."
+If an action answers *"This post is being settled by the network — please retry in a moment"*, the daily settlement is running on that post; retry a few seconds later. Nothing was charged.
 
-**Key rule: Only credible claims influence others.** If a claim's VS drops to zero or below, all its outgoing links go silent — it can't affect other claims until it regains positive VS through direct support.
+### What you earn
 
----
+Your rate depends on four things: how strong the score is (0 % at VS = 0, more as |VS| grows), how large the post's total stake is relative to the system reference, your place in the queue (earlier stakers on a side earn more), and the protocol's rate bounds (never above 100 % per year). If your side matches the score's sign you earn at that rate; the other side loses at it. **Positions** shows the live rate and the factors behind it for every stake you hold.
 
-## How to Win
+### Rules worth knowing
 
-### Strategy 1: Back the Truth Early
-
-Find claims that are true but undervalued. Stake support early — you get the best queue position, which means the highest earning rate. As more people agree and stake support, the VS rises, and your position earns faster.
-
-### Strategy 2: Challenge Misinformation
-
-Find claims that are false but have support. Stake challenge. If you're right and the community follows, the VS goes negative, and challengers earn while supporters lose their stake.
-
-### Strategy 3: Build Evidence
-
-Instead of staking directly on a crowded claim, create or stake on **evidence links**. A well-staked challenge link from a credible source can flip a claim's VS — and your link stake earns from a smaller, less competitive pool.
-
-### Strategy 4: Defend Your Positions
-
-If someone challenges a claim you support, you can:
-- Add more direct support stake
-- Challenge the challenger's claim (reduce its VS, reducing its influence)
-- Challenge the evidence link itself (silence it)
+- **Credibility gate.** A claim with VS ≤ 0 cannot influence other claims through its links until it recovers.
+- **Conservation of influence.** A claim's influence is shared across its outgoing links in proportion to their stake, not duplicated. A claim counts at most its 64 best-staked incoming links.
+- **Permanence.** Claims and links are on-chain forever, under the address that made them.
 
 ---
 
-## Earning Rate (APR)
+## Strategy
 
-Your earning rate depends on four factors:
-
-1. **Truth Pressure** — How strong the VS is. A VS of 100% means maximum earning pressure. VS of 0% means no earnings. The VS that pays is the claim's *effective* score — direct stake **and** the evidence linked to it — averaged over the epoch: a VSP of evidence counts exactly like a VSP staked directly, for as long as it stands. Settlement happens once per epoch (daily), and evidence is read from the **last settlement** of the source claim and the link: new or changed evidence is counted from the next daily settlement, one hop per day, once it has stood for at least **1 VSP-day** (see Settlement below).
-2. **Post Size** — Larger total stakes face stronger pressure. Your claim's total stake relative to the system-wide reference (`sMax`).
-3. **Queue Position** — Earlier stakers earn more. Your position weight is based on where you entered the queue: `positionWeight = 1 − (yourPosition / sideTotal)`, where `yourPosition` is the midpoint of your share of the side total. A sole staker on a side earns at half the base rate; the first of many earlier stakers approaches the full rate; later entries earn progressively less. An individual lot's effective rate never exceeds the base rate.
-4. **Rate Bounds** — Earning rates scale from 0% (at VS = 0) up to a maximum of 100% APR.
-
-Winners (your side aligns with the VS direction) earn at this rate. Losers (opposing side) lose at this rate.
+- **Back the truth early.** The first stakers on a true claim get the best queue position and the best rate.
+- **Challenge what's wrong.** A false claim with support is an opportunity: stake challenge, and if others follow, the score turns negative.
+- **Build evidence.** A credible challenging link can flip a crowded claim's score, and a link's stake pool is smaller and less competitive.
+- **Defend.** If a claim you support is challenged, add support, challenge the challenger's claim, or challenge the link itself.
+- **Start small** — 1 VSP — until the daily settlement and the presence bar make sense to you.
 
 ---
 
-## Key Concepts
+## Quick reference
 
-### Posting Fee
-Creating a claim or link costs **1 VSP**, which is permanently burned. This prevents spam and gives every new claim an initial positive VS.
-
-### Activity Threshold
-A claim or link needs at least 1 VSP of stake, averaged over the day, to be "active" for that day's settlement and influence other claims (see the presence bar under Settlement).
-
-### Credibility Gate
-Only claims with VS > 0 can influence other claims through evidence links. A discredited claim (VS ≤ 0) is inert in the evidence graph until rehabilitated.
-
-### Settlement
-Once a day every claim and link **settles**: its positions gain or lose for the day, and it records a snapshot of its stake and score. A claim's evidence is read from those snapshots, so what you see next to an evidence link — its **Effect** — is the contribution as of the last settlement of that link and its source claim. A change deeper in the graph arrives one hop per day.
-
-**The presence bar.** A link or claim counts in a day only if its stake, averaged over that day, is at least the activity threshold of 1 VSP — in other words, at least **1 VSP-day of presence**: 1 VSP standing the whole day, 2 VSP for half a day, 4 VSP for six hours. So a 1-VSP link placed at noon counts from the settlement *after* next (its first full day), while a 2-VSP link placed at noon counts at the very next one. This is what stops anyone from staking a link for the last minutes of a day and having it count for the whole day. Settlement is permissionless and the network runs it for every post shortly after each daily boundary; if a transaction answers "being settled by the network — please retry in a moment", the network is doing exactly that, and the retry goes through.
-
-### Conservation of Influence
-A claim's influence is distributed — not duplicated — across its outgoing links, in proportion to the stake on each link. Creating more links from the same claim dilutes each link's share. On the receiving side, a claim counts its 64 most-staked eligible incoming links; links beyond those have no effect, so flooding a claim with weak links does nothing.
-
-### Single-Sided Positions
-You can only hold a position on one side of any given claim at a time. To flip from support to challenge (or vice versa), set a signed target on the opposite side — the protocol withdraws the old position and opens the new one in a single transaction. Flipping closes your old lot entirely; the new position starts at the back of the destination side's queue.
-
----
-
-## Quick Reference
-
-| Action | Cost | What it does |
-|--------|------|-------------|
-| Create claim | 1 VSP fee + initial stake | Publishes a factual assertion on-chain |
-| Create link | 1 VSP fee + initial stake | Connects two claims as support or challenge |
-| Stake support | Any amount | Backs a claim as true (earns if VS > 0) |
-| Stake challenge | Any amount | Backs a claim as false (earns if VS < 0) |
-| Withdraw | Free | Removes your stake at any time |
-| Buy VSP | USDC | Purchase tokens to play |
-| Sell VSP | Free | Convert tokens back to USDC |
-
----
-
-## Tips
-
-- **Start small.** Stake 1 VSP to learn how the system works before committing more.
-- **Check the evidence graph.** A claim might look safe but have a strong incoming challenge link that's about to flip its VS — evidence shows its Effect from the first settlement after it has stood for 1 VSP-day.
-- **Queue position matters.** Being first to stake on a new claim gives you the best earning rate.
-- **Links are cheaper plays.** Staking on a link lets you influence a claim's VS without competing in a large direct stake pool.
-- **Watch the Portfolio.** Your Portfolio page shows real-time APR, position status, and the factors behind your earnings.
-- **VS = 0 is not safe.** A claim with VS = 0 isn't earning anything, and one well-funded challenge can push it negative quickly.
-- **One side only.** You can't hedge by staking both sides of the same claim. Pick a side and commit.
+| Action | Where | What it costs | What you click in MetaMask |
+|--------|-------|---------------|----------------------------|
+| Get AVAX + USDC | Exchange → withdraw on Avalanche C-Chain | Exchange fees | — (confirm on the exchange) |
+| Buy VSP | **Buy** → Preview Fill → Buy | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
+| Stake / change / withdraw | The claim's stake box | Relay fee in VSP | **Sign** ×1–3 |
+| Create claim | Explore → article → **+** | 1 VSP burned + stake + relay fee | **Sign** ×1–3, twice if staking |
+| Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee | **Sign** ×1–3, twice if staking |
+| Sell VSP | **Sell** → Preview Fill → Sell | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
 
 ---
 
 ## Troubleshooting
 
-### MetaMask doesn't show Avalanche
-Make sure you've added the Avalanche C-Chain network manually (see step 2 above) or used chainlist.org.
+**MetaMask doesn't show Avalanche.** Repeat Step 2; check the network menu reads Avalanche C-Chain.
 
-### My USDC isn't showing up
-Confirm that you withdrew USDC on the **Avalanche C-Chain** network, not Ethereum or another chain. Also check that you're looking at the correct MetaMask account and network.
+**My USDC or AVAX isn't showing.** Check the withdrawal used network Avalanche C-Chain; check you are looking at the same account you pasted into the exchange; import USDC as a custom token (Step 3.6). A withdrawal can take 15 minutes — look it up on [snowtrace.io](https://snowtrace.io) by pasting your address.
 
-### Transaction is stuck or pending
-Verisphere handles gas fees for you through meta-transactions. If a transaction seems stuck, try refreshing the page and resubmitting. Your wallet won't be double-charged.
+**"This wallet has no AVAX" / "insufficient funds for gas".** Only buying and selling need AVAX. Send 0.05 AVAX to your wallet from the exchange (Step 3).
 
-### I can't find my position
-Check the **Portfolio** tab. All your active stakes appear there with their current VS, APR, and status.
+**The Buy or Sell button is missing.** Connect your wallet first; the buttons appear once you are connected and the pool is reachable.
 
-### "This post is being settled by the network — please retry in a moment"
-Your transaction arrived while the post, or evidence it depends on, still had a daily settlement outstanding. The network settles it within moments; resubmit and it goes through. Nothing was charged.
+**The swap failed: "price moved beyond the 1 % slippage bound".** The pool moved while you were confirming. Click **Preview Fill** again and retry. Your USDC is still in the wallet.
 
-### "Cannot stake on opposite side"
-You already have a stake on the other side of this claim. Withdraw it first (set your target to 0), then stake on the new side.
+**MetaMask shows "Signature request" — is that safe?** Inside Verisphere, yes: that is how gas-free actions work. Read the token and amount it names. Verisphere never asks you to sign a blank message or to approve an unlimited amount for an unknown address.
+
+**"Insufficient VSP for relay fee".** You need at least 0.1 VSP on top of what you stake. Buy a little more.
+
+**Action stuck in the progress box.** Refresh the page and check **Transactions**: the action either confirmed (it is listed) or never went out (sign again). You cannot be charged twice for the same action.
+
+**"Cannot stake on opposite side."** You hold a stake on the other side. Enter an amount with the sign you want (the protocol switches you) or 0 to withdraw.
+
+**I can't find my position.** **Positions** lists every stake with its score, rate and status.
+
+**I lost my Secret Recovery Phrase.** Nobody — not Verisphere, not MetaMask — can restore it. Move your funds to a new wallet whose phrase you have written down.
