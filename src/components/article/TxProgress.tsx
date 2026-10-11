@@ -14,6 +14,8 @@ type ProgressState = {
   title: string;
   steps: TxStep[];
   error: string | null;
+  // patch_fe_gas_fee: the relay's fee for this action, quoted from gas before signing
+  fee: { fee_vsp: number; fee_usd: number } | null | "unavailable";
 };
 
 const INITIAL: ProgressState = {
@@ -21,6 +23,7 @@ const INITIAL: ProgressState = {
   title: "",
   steps: [],
   error: null,
+  fee: null,
 };
 
 // Auto-dismiss delay after completion (ms)
@@ -53,6 +56,7 @@ export default function TxProgress() {
             title: detail.title || "Processing…",
             steps: detail.steps || [],
             error: null,
+            fee: null,
           });
           break;
 
@@ -102,9 +106,22 @@ export default function TxProgress() {
       }
     };
 
+    // patch_fe_gas_fee: the quote arrives from useMetaTx once per action
+    const feeHandler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (!d) return;
+      setState((prev) =>
+        prev.visible
+          ? { ...prev, fee: d.available ? { fee_vsp: d.fee_vsp, fee_usd: d.fee_usd } : "unavailable" }
+          : prev,
+      );
+    };
     window.addEventListener("verisphere:tx-progress", handler);
-    return () =>
+    window.addEventListener("verisphere:fee-quote", feeHandler);
+    return () => {
       window.removeEventListener("verisphere:tx-progress", handler);
+      window.removeEventListener("verisphere:fee-quote", feeHandler);
+    };
   }, []);
 
   if (!state.visible) return null;
@@ -191,12 +208,21 @@ export default function TxProgress() {
             {step.label}
             {step.status === "active" && (
               <span style={{ color: C.muted, marginLeft: 4 }}>
-                (confirm in wallet)
+                (sign in wallet)
               </span>
             )}
           </span>
         </div>
       ))}
+
+      {/* patch_fe_gas_fee: the fee the user pays for this action — the relay's gas cost in VSP, quoted before signing */}
+      {state.fee && (
+        <div data-testid="tx-fee" style={{ marginTop: 6, fontSize: 11, color: C.muted, borderTop: `1px solid ${C.gb}`, paddingTop: 5 }}>
+          {state.fee === "unavailable"
+            ? "Relay fee: quoted at submission"
+            : <>Relay fee: <b style={{ color: C.text }}>{state.fee.fee_vsp.toFixed(4)} VSP</b> (≈ ${state.fee.fee_usd.toFixed(3)}, taken after the action confirms)</>}
+        </div>
+      )}
 
       {/* Error */}
       {state.error && (

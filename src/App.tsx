@@ -7,6 +7,7 @@ import TransactionsView from "./components/TransactionsView";  /* patch_bundle04
 import { useNotifications } from "./notifications";  /* patch_bundle04_5_p3_tx_import */
 import ContentPanel from "./components/ContentPanel";
 import { TxProgress } from "./components/article";
+import WalletPromptBar from "./components/WalletPromptBar";  // patch_fe_gas_fee
 import ClaimsExplorer from "./components/ClaimsExplorer";
 import Portfolio from "./components/Portfolio";
 
@@ -748,6 +749,7 @@ export default function App() {
       </main>
 
       <TxProgress />
+      <WalletPromptBar />  {/* patch_fe_gas_fee: persistent "signature request waiting" bar */}
 
       {/* Footer */}
       <footer className="footer" style={{ flexShrink: 0 }}>

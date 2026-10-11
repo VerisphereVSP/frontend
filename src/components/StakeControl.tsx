@@ -112,20 +112,9 @@ export default function StakeControl({
     });
 
     try {
-      // Check VSP balance for relay fee (all operations cost 0.1 VSP)
-      {
-        const balRes = await fetch(`${API}/token/balance?address=${address}`);
-        if (balRes.ok) {
-          const balData = await balRes.json();
-          const balVSP = Number(BigInt(balData.balance || '0')) / 1e18;
-          if (balVSP < 0.1) {
-            setErr(`Insufficient VSP for relay fee (have ${balVSP.toFixed(4)}, need 0.1)`);
-            fireTxProgress({ action: 'error', error: 'Insufficient VSP for relay fee. Buy VSP first.' });
-            setBusy(false);
-            return;
-          }
-        }
-      }
+      // patch_fe_gas_fee: no hard-coded relay fee here. The relay quotes the exact
+      // gas-indexed fee for this action (shown in the progress box) and answers
+      // "Insufficient VSP for relay fee: need X" precisely when the balance is short.
       // Check VSP balance before submitting
       if (targetVal !== 0) {
         try {
@@ -134,7 +123,7 @@ export default function StakeControl({
             const balData = await balRes.json();
             const balVSP = Number(BigInt(balData.balance || "0")) / 1e18;
             const needed = Math.abs(targetVal) - (targetVal > 0 ? liveSup : liveChal);
-            if (balVSP < (needed > 0 ? needed + 0.1 : 0.1) - 0.001) {  // include relay fee  // +0.1 for relay fee
+            if (balVSP < needed - 0.001) {  // patch_fe_gas_fee: the relay checks the fee on top
               setErr(`Insufficient VSP (have ${balVSP.toFixed(2)}, need ${needed.toFixed(2)})`);
               fireTxProgress({ action: "error", error: "Insufficient VSP balance" });
               setBusy(false);
