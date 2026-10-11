@@ -1,6 +1,6 @@
 # How to Play Verisphere
 
-<!-- patch_guide_v2 -->
+<!-- patch_guide_v2 --><!-- patch_fe_gas_fee -->
 
 Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. If the claim holds up, you earn; if it doesn't, you lose. What counts as credible is decided by what people are willing to stake, not by votes or likes.
 
@@ -84,13 +84,13 @@ Every purchase asks for both confirmations (the approval covers exactly one swap
 
 ### What a Verisphere action looks like
 
-Inside Verisphere you never pay gas and MetaMask never shows **Confirm**; it shows **Signature request** instead. A relay submits the transaction for you and takes a small fee **in VSP** — the app checks you hold at least 0.1 VSP for it before it starts. One action can ask for up to three signatures in a row:
+Inside Verisphere you never pay gas and MetaMask never shows **Confirm**; it shows **Signature request** instead. A relay submits the transaction for you and takes a small fee **in VSP** — its own cost of gas plus a fixed markup, the same for a large stake as for a small one. The progress box shows the fee before you sign, and it is taken only after the action has confirmed. Your first action can ask for up to three signatures in a row; after that, usually just one:
 
-1. permission for the protocol to use the VSP you are staking (only the first time, or when the amount exceeds what you allowed before),
-2. permission to take the relay fee,
-3. the action itself.
+1. permission for the protocol to use your VSP (once; it covers your future stakes),
+2. permission to take relay fees (once; it covers many actions),
+3. the action itself — the only signature you will normally see.
 
-Read each one — it names the token and the amount — and click **Sign**. A progress box in the app then tracks the action ("Confirming … on chain"); it confirms in a few seconds and the page updates within about half a minute once the indexer has caught up. If you close MetaMask instead of signing, nothing happens and nothing is charged.
+Read each one — it names the token and the amount — and click **Sign**. While a request is open, a dark bar at the top of the page says so ("Signature request waiting in your wallet"); if the MetaMask window is not in front, click the MetaMask icon in your browser toolbar. A progress box then tracks the action ("Confirming … on chain"); it confirms in a few seconds and the page updates within about half a minute once the indexer has caught up. If you close MetaMask instead of signing, nothing happens and nothing is charged.
 
 Creating a claim or a link *with an opening stake* is two actions in a row — first the post, then the stake — so expect two rounds of signature requests.
 
@@ -188,9 +188,9 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 |--------|-------|---------------|----------------------------|
 | Get AVAX + USDC | Exchange → withdraw on Avalanche C-Chain | Exchange fees | — (confirm on the exchange) |
 | Buy VSP | **Buy** → Preview Fill → Buy | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
-| Stake / change / withdraw | The claim's stake box | Relay fee in VSP | **Sign** ×1–3 |
-| Create claim | Explore → article → **+** | 1 VSP burned + stake + relay fee | **Sign** ×1–3, twice if staking |
-| Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee | **Sign** ×1–3, twice if staking |
+| Stake / change / withdraw | The claim's stake box | Relay fee in VSP (shown first) | **Sign** ×1 (×3 the first time) |
+| Create claim | Explore → article → **+** | 1 VSP burned + stake + relay fee | **Sign** ×1 per step (claim, then stake) |
+| Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee | **Sign** ×1 per step (link, then stake) |
 | Sell VSP | **Sell** → Preview Fill → Sell | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
 
 ---
@@ -209,7 +209,7 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 **MetaMask shows "Signature request" — is that safe?** Inside Verisphere, yes: that is how gas-free actions work. Read the token and amount it names. Verisphere never asks you to sign a blank message or to approve an unlimited amount for an unknown address.
 
-**"Insufficient VSP for relay fee".** You need at least 0.1 VSP on top of what you stake. Buy a little more.
+**"Insufficient VSP for relay fee: need …".** The message names the exact amount; you need that much on top of what you stake. Buy a little more.
 
 **Action stuck in the progress box.** Refresh the page and check **Transactions**: the action either confirmed (it is listed) or never went out (sign again). You cannot be charged twice for the same action.
 

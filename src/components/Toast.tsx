@@ -51,17 +51,40 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, 4000);
   }, []);
 
+  // patch_fe_gas_fee: while a wallet signature request is open (WalletPromptBar),
+  // hold informational toasts and show them once it resolves — a toast landing
+  // on top of the progress box while the user hunts for the MetaMask window was
+  // the "lost behind toast" complaint. Errors always show.
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [held, setHeld] = useState<{ message: string; type: ToastType }[]>([]);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (!d) return;
+      setPromptOpen(d.state === "open");
+    };
+    window.addEventListener("verisphere:wallet-prompt", handler);
+    return () => window.removeEventListener("verisphere:wallet-prompt", handler);
+  }, []);
+  useEffect(() => {
+    if (promptOpen || held.length === 0) return;
+    held.forEach((h) => toast(h.message, h.type));
+    setHeld([]);
+  }, [promptOpen, held, toast]);
+
   // Listen for custom toast events (from protocol hooks that can't use React context)
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.message) {
-        toast(detail.message, detail.type || "info");
+        const type: ToastType = detail.type || "info";
+        if (promptOpen && type !== "error") setHeld((prev) => [...prev, { message: detail.message, type }]);
+        else toast(detail.message, type);
       }
     };
     window.addEventListener("verisphere:toast", handler);
     return () => window.removeEventListener("verisphere:toast", handler);
-  }, [toast]);
+  }, [toast, promptOpen]);
 
   const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
     success: { bg: "#059669", border: "#047857", icon: "✓" },
@@ -73,12 +96,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {/* Toast container — fixed bottom-right */}
+      {/* Toast container — fixed bottom-LEFT (patch_fe_gas_fee: the progress box owns bottom-right) */}
       <div
         style={{
           position: "fixed",
           bottom: 20,
-          right: 20,
+          left: 20,
           zIndex: 9999,
           display: "flex",
           flexDirection: "column",
