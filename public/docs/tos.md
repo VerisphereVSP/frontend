@@ -1,8 +1,9 @@
 # Terms of Service
 
 **Verisphere Corp.**, a Delaware corporation ("Company," "we," "us")
-**Version:** 2.1
-**Effective Date:** September 1, 2026
+**Version:** 2.2
+**Effective Date:** October 12, 2026
+<!-- patch_fe_legal_docs: v2.2 — Section 5 describes the gas-based relay fee (the 0.5%-of-value schedule was retired on 2026-10-11); Privacy Policy and Fees pages referenced. -->
 **Contact:** info@verisphere.co
 
 ## 1. Acceptance of Terms
@@ -55,8 +56,16 @@ Section 6 (including the emission schedule) are outside the Company's control.
 ## 5. Relay Service and Fees
 
 The Service can submit blockchain transactions on your behalf through a relay
-("meta-transactions"), paying gas fees so you don't need native AVAX tokens. A relay
-fee of up to 0.5% of the transaction value in VSP may be charged for this service.
+("meta-transactions"), paying the network gas fee so you don't need native AVAX tokens.
+For this the relay charges a **relay fee in VSP** equal to its estimated gas cost for
+your transaction, converted to VSP at current market prices, plus a fixed markup
+(25% at the effective date). The fee is based on gas only — never on the value of your
+stake or transaction — and has no minimum. It is quoted to you before you sign, it is
+collected only after your transaction has confirmed, and the amount collected never
+exceeds the amount quoted. Nothing is charged for declined, refused or failed
+transactions. The current formula, markup and the permissions involved are described
+on the [Fees](viewer.html?file=fees.md) page, which forms part of these Terms; the
+markup may change, and the live value is published by the Service.
 The relay submits your own signed instructions; it does not take custody of your
 tokens or act as your agent for trading.
 
@@ -210,6 +219,11 @@ enforce any provision is not a waiver.
 The Company may modify these Terms at any time. Continued use of the Service after
 changes constitutes acceptance of the modified Terms.
 
-## 18. Contact
+## 18. Privacy
+
+Our handling of information is described in the [Privacy Policy](viewer.html?file=privacy.md),
+which forms part of these Terms.
+
+## 19. Contact
 
 For questions about these Terms, contact: **info@verisphere.co**
