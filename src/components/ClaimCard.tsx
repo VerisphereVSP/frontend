@@ -187,6 +187,26 @@ export default function ClaimCard({
       >
         {card.text}
       </p>
+      {/* patch_report_path: a report is an e-mail to abuse@ with the post id and the text; the decision is human,
+          the switch is the admin hide endpoint. Only for claims that exist on chain (there is nothing to report
+          about a draft). */}
+      {claimIsOnChain && postId != null && (
+        <div style={{ textAlign: "right", marginTop: -18, marginBottom: 16, fontSize: 12 }}>
+          <a
+            className="report-link"
+            href={`mailto:abuse@verisphere.co?subject=${encodeURIComponent(`Report claim #${postId}`)}&body=${encodeURIComponent(
+              `Claim #${postId}\n\n"${card.text}"\n\nWhy you are reporting it (what policy it breaks):\n\n`,
+            )}`}
+            title="Report this claim to Verisphere (opens your e-mail client)"
+          >
+            Report
+          </a>
+          {" · "}
+          <a href="/docs/viewer.html?file=content-policy.md" target="_blank" rel="noreferrer">
+            Content policy
+          </a>
+        </div>
+      )}
 
       {/* Stake gauges */}
       <div className="queues">
