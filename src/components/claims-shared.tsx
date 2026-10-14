@@ -377,6 +377,15 @@ export function ExpandedClaimDetail({
             onClick={() => setShowDupes(!showDupes)}
           >Duplicates ({(c.dupe_member_count || 0) - 1})</span>
         )}
+        {/* patch_report_path_2: report = e-mail to abuse@ with the id and text; the decision is human */}
+        <a
+          className="report-link"
+          href={`mailto:abuse@verisphere.co?subject=${encodeURIComponent(`Report claim #${c.post_id}`)}&body=${encodeURIComponent(
+            `Claim #${c.post_id}\n\n"${c.text || ""}"\n\nWhy you are reporting it (what policy it breaks):\n\n`,
+          )}`}
+          title="Report this claim to Verisphere (opens your e-mail client). See the content policy in the footer."
+          style={{ fontSize: 10, color: S.textFaint, marginLeft: 8 }}
+        >Report</a>
         <span
           onClick={onClose}
           title="Close"
