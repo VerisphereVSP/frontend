@@ -759,6 +759,7 @@ export default function App() {
         <a href="/docs/viewer.html?file=tos.md">Terms of Service</a>
         <a href="/docs/viewer.html?file=privacy.md">Privacy</a>  {/* patch_fe_legal_docs */}
         <a href="/docs/viewer.html?file=fees.md">Fees</a>
+        <a href="/docs/viewer.html?file=content-policy.md">Content policy</a>  {/* patch_report_path */}
         <span>© {new Date().getFullYear()} Verisphere</span>
       </footer>
     </div>
