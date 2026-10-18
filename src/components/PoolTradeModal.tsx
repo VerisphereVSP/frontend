@@ -12,6 +12,7 @@ import { parseUnits, formatUnits, createPublicClient, custom } from "viem";
 import type { PublicClient } from "viem";
 
 import { EXPECTED_CHAIN_ID, CHAIN_LABEL } from "../web3/chains";
+import AvaxTradePanel, { fetchPoolRoutes, type PoolRoutes } from "./AvaxTradePanel"; // patch_fe_pool_avax
 const SLIPPAGE_BPS = 100n; // 1%
 
 const POOL_ABI = [
@@ -127,6 +128,11 @@ export default function PoolTradeModal({
   const inDecimals = side === "buy" ? 6 : 18;
   const outDecimals = side === "buy" ? 18 : 6;
 
+  // patch_fe_pool_avax: pay with AVAX (default when the venue can hop through WAVAX/USDC) or USDC (this file's original path)
+  const [routes, setRoutes] = useState<PoolRoutes | null>(null);
+  const [payWith, setPayWith] = useState<"AVAX" | "USDC">("USDC");
+  useEffect(() => { fetchPoolRoutes().then((r) => { setRoutes(r); if (r?.routes.AVAX) setPayWith("AVAX"); }); }, []);
+  const avaxAvailable = Boolean(routes?.routes.AVAX);
   const [denom, setDenom] = useState<Denom>("vsp");
   const [amount, setAmount] = useState("");
   const [tokens, setTokens] = useState<{ vsp: `0x${string}`; usdc: `0x${string}` } | null>(null);
@@ -353,6 +359,21 @@ export default function PoolTradeModal({
           {wrongChain && <span style={{ color: "#b45309" }}> — switch to {CHAIN_LABEL}</span>}
         </div>
 
+        {avaxAvailable && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12 }}>
+            <span style={{ color: "#6b7280" }}>{side === "buy" ? "Pay with:" : "Receive:"}</span>
+            {(["AVAX", "USDC"] as const).map((o) => (
+              <button key={o} className="btn" onClick={() => { setPayWith(o); setPreview(null); setError(null); }}
+                style={{ fontSize: 11, padding: "3px 10px", fontWeight: payWith === o ? 700 : 400,
+                  background: payWith === o ? "#111827" : undefined, color: payWith === o ? "#fff" : undefined }}>
+                {o}
+              </button>
+            ))}
+          </div>
+        )}
+        {payWith === "AVAX" && routes ? (
+          <AvaxTradePanel side={side} routes={routes} onSwapped={onSwapped} onClose={onClose} />
+        ) : (<>
         <div style={{ marginBottom: 12, fontSize: 13 }}>
           {side === "buy" ? "Your USDC balance" : "Your VSP balance"}:{" "}
           <strong>{side === "buy" ? usdcBalance.toFixed(2) : vspBalance.toFixed(4)}</strong>
@@ -461,6 +482,7 @@ export default function PoolTradeModal({
         {loading && status && (
           <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280", textAlign: "center" }}>{status}</div>
         )}
+        </>)}
 
         <div style={{ marginTop: 8, fontSize: 10, color: "#9ca3af", textAlign: "center" }}>
           Executes on the public pool from your own wallet — the site never holds your funds.

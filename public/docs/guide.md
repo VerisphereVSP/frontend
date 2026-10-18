@@ -68,10 +68,10 @@ Connecting is a permission, not a transaction: nothing moves and nothing is char
 
 VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it; the **Buy** button executes a swap on that pool from your own wallet — the site never holds your funds.
 
-1. Click **Buy** in the header. The **Buy VSP** window opens. It shows your USDC balance and **Gas: … AVAX** — the AVAX you have for fees. If it says *"This wallet has no AVAX"*, finish Step 3 first.
-2. Type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance.
-3. Click **Preview Fill**. The window shows how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (the swap tolerates a 1 % price move while you confirm).
-4. Click **Buy … VSP**. MetaMask now opens **twice**:
+1. Click **Buy** in the header. The **Buy VSP** window opens. Choose **Pay with AVAX** (the default — one transaction, no approval) or **USDC**. It shows your balance in the currency you pay with; if you have no AVAX at all, finish Step 3 first.
+2. **Paying with AVAX:** type the amount of AVAX to spend (**Max** leaves a little for gas). The window quotes how much VSP you receive, the minimum you will accept (a 0.5 % price move is tolerated while you confirm) and the price impact if it is noticeable. Click **Buy … VSP** — MetaMask opens **once**, for the swap itself. Confirm it; two seconds later the window shows **Done ✓**.
+3. **Paying with USDC:** type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance. Click **Preview Fill** to see how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (1 % tolerance).
+4. Then click **Buy … VSP**. MetaMask now opens **twice**:
    - *"Approve in your wallet…"* — a request to let the pool take exactly this much USDC. Click **Confirm**. This is a real transaction: it uses a tiny amount of AVAX (a fraction of a cent) and confirms in about two seconds while the window says *"Waiting for approval…"*.
    - *"Confirm the swap in your wallet…"* — the swap itself. Click **Confirm**. Another small AVAX fee, another two seconds (*"Swapping…"*).
 5. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, import it as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals.

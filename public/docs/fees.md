@@ -12,7 +12,7 @@ This page lists every charge you can meet while using Verisphere, who receives i
 |---|---|---|---|
 | Stake, unstake, create a claim, link evidence | **Relay fee** = our gas cost × 1.25 | VSP | Verisphere (covers the gas we pay) |
 | Create a claim or a link | **Posting fee** 1 VSP | VSP | Burned by the protocol — nobody receives it |
-| Buy or sell VSP | Pool fee 0.3 % + two network transactions | USDC/VSP; AVAX for gas | Pool liquidity providers; Avalanche validators |
+| Buy or sell VSP | Pool fee 0.3 % per pool (0.6 % when paying with AVAX, which passes through two pools) + network gas | AVAX or USDC; AVAX for gas | Pool liquidity providers; Avalanche validators |
 | Everything else (browsing, connecting, notifications) | Free | — | — |
 
 ## The relay fee
@@ -40,7 +40,7 @@ Creating a claim, or a link between claims, costs **1 VSP**, set by the protocol
 
 ## Buying and selling VSP
 
-The **Buy** and **Sell** windows trade against a public liquidity pool on a decentralized exchange from your own wallet. Verisphere charges nothing for this; the costs are the pool's **0.3 % fee**, paid to the people who provide the pool's liquidity, and the **Avalanche network fees** for the two transactions (an approval and the swap), paid in AVAX from your wallet — typically well under 0.01 AVAX together. Prices move with pool depth; the window shows the price impact of your order and the minimum you will receive before you confirm.
+The **Buy** and **Sell** windows trade against a public liquidity pool on a decentralized exchange from your own wallet. Verisphere charges nothing for this. You can pay with **AVAX** (the default: one transaction, no approval — your AVAX passes through the exchange's AVAX/USDC pool and then the VSP pool, so two 0.3 % pool fees apply) or with **USDC** (one pool fee, plus a one-time approval transaction). Selling works the same way in reverse, into AVAX or USDC. Pool fees go to the people who provide the pools' liquidity; the **Avalanche network fee** for each transaction is paid in AVAX from your wallet — typically well under 0.01 AVAX. Prices move with pool depth; the window shows the price impact of your order and the minimum you will receive before you confirm.
 
 ## What is never charged
 
