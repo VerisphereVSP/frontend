@@ -30,9 +30,9 @@ That is the whole formula. The fee depends only on gas — it is the same whethe
 **The permissions involved.** Smart contracts can only move your tokens with your prior permission (an ERC-20 "allowance"). Your first action therefore asks for up to two one-time signatures in addition to the action itself:
 
 - an allowance letting the Verisphere **StakeEngine** take the VSP you stake — 10,000 VSP, renewed only when it runs low (this is *not* a charge; it is the permission that lets your own stakes go through, and it is only ever used by your own signed actions);
-- an allowance of **100 VSP for relay fees**, renewed when it drops below 10 VSP — the fee is drawn from this, one small transfer at a time.
+- an allowance of **100 VSP for relay fees**, renewed when it drops below 10 VSP — the fee is drawn from this, one small transfer at a time. The spender is the relay wallet — on Avalanche C-Chain `0x6b23ffeca4378be332e424bff653d534214b2b96`, also published as `feeCollector` by the app's `/api/relay/config`; wallets may caution that it is a plain address rather than a contract — compare the address.
 
-After the first action you normally see a single signature request per action.
+MetaMask shows these two permissions as **Spending cap request** screens and the action itself as a **Signature request**; none of them is a gas transaction. After the first action you normally see a single signature request per action. <!-- patch_fe_docs_avax -->
 
 ## The posting fee
 

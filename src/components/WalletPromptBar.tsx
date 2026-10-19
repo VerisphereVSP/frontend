@@ -49,7 +49,7 @@ export default function WalletPromptBar() {
       <span aria-hidden style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%",
         background: "#f59e0b", boxShadow: "0 0 0 4px rgba(245,158,11,0.3)" }} />
       <span>
-        <b>Signature request waiting in your wallet</b>
+        <b>Your wallet is waiting for you</b>  {/* patch_fe_docs_avax: MetaMask labels permits "Spending cap request", not "Signature request" */}
         {open.count > 1 && <span style={{ opacity: 0.8 }}> — {open.index} of {open.count}</span>}
         <span style={{ opacity: 0.85 }}>: {open.label}</span>
       </span>

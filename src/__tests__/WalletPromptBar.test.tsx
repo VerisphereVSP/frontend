@@ -21,7 +21,7 @@ describe("WalletPromptBar", () => {
     const bar = () => container.querySelector('[data-testid="wallet-prompt-bar"]');
     expect(bar()).toBeNull();
     prompt({ state: "open", label: "Sign the action — relay fee 0.3300 VSP", index: 2, count: 2 });
-    expect(bar()?.textContent).toContain("Signature request waiting in your wallet");
+    expect(bar()?.textContent).toContain("Your wallet is waiting for you");
     expect(bar()?.textContent).toContain("2 of 2");
     expect(bar()?.textContent).toContain("relay fee 0.3300 VSP");
     expect(bar()?.textContent).not.toContain("Don't see it?");

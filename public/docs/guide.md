@@ -1,6 +1,6 @@
 # How to Play Verisphere
 
-<!-- patch_guide_v2 --><!-- patch_fe_gas_fee -->
+<!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax -->
 
 Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. If the claim holds up, you earn; if it doesn't, you lose. What counts as credible is decided by what people are willing to stake, not by votes or likes.
 
@@ -9,8 +9,8 @@ This guide takes you from nothing to your first stake. If you have never used a 
 **What you will need**
 
 - A desktop browser (Chrome, Firefox, Brave or Edge) with the MetaMask extension.
-- A little **AVAX**, the Avalanche network's own coin — **0.05 AVAX is plenty**. AVAX pays the network fee ("gas") for the two transactions you confirm when you buy VSP, and again when you sell it. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free.
-- Some **USDC**, a dollar-pegged stablecoin, to buy VSP with. A few dollars is enough to start.
+- Some **AVAX**, the Avalanche network's own coin. It does two jobs: it is what you **buy VSP with** (the default), and it pays the network fee ("gas") for the buy and sell transactions — a fraction of a cent each. **0.1 AVAX** is enough to buy a starter amount of VSP and leave gas to spare. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free.
+- Optional: **USDC**, a dollar-pegged stablecoin. You can pay for VSP with USDC instead of AVAX if you already hold some on Avalanche; you still need a little AVAX for gas.
 
 ---
 
@@ -43,18 +43,19 @@ Manual alternative: MetaMask → network menu (top left) → **Add network** →
 
 Check: the network menu now reads **Avalanche C-Chain**. Stay on it for everything that follows.
 
-### Step 3. Get AVAX and USDC into your wallet
+### Step 3. Get AVAX into your wallet
 
-You need both. **AVAX** pays the gas when you buy or sell VSP; **USDC** is what you spend on VSP. The simplest route is one exchange account that withdraws to Avalanche.
+One asset is enough: **AVAX** buys the VSP and pays the gas. The simplest route is an exchange account that withdraws to Avalanche.
 
 1. Create an account on an exchange that supports Avalanche C-Chain withdrawals — for example [Coinbase](https://www.coinbase.com), [Kraken](https://www.kraken.com) or [Binance](https://www.binance.com). Identity verification can take minutes to a few days.
-2. Buy a little **AVAX** (0.1 AVAX is more than enough) and the **USDC** you want to play with.
-3. **Withdraw AVAX** to your MetaMask address. In the withdrawal form choose network **Avalanche C-Chain** (sometimes shown as "Avalanche" or "AVAXC"). Confirm by e-mail or authenticator if the exchange asks.
-4. **Withdraw USDC** the same way — network **Avalanche C-Chain**. This is the step people get wrong: if you pick Ethereum, Solana or any other network, the USDC will not be in your Avalanche wallet.
-5. Wait. Withdrawals usually arrive in 2–15 minutes. New exchange accounts sometimes hold withdrawals for a few days after a bank deposit; the exchange shows a date if so.
-6. In MetaMask, AVAX shows automatically. To see USDC, go to **Tokens → Import tokens → Custom token** and paste the USDC contract `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E`; the symbol and 6 decimals fill in. (Avalanche also has an older bridged "USDC.e" — Verisphere uses the native one above.)
+2. Buy the **AVAX** you want to play with — 0.1 AVAX covers a starter amount of VSP plus gas for many swaps; buy more if you plan to stake more.
+3. **Withdraw AVAX** to your MetaMask address. In the withdrawal form choose network **Avalanche C-Chain** (sometimes shown as "Avalanche", "AVAX C-Chain" or "AVAXC"). This is the step people get wrong: if you pick any other network, the coins will not be in your Avalanche wallet. Confirm by e-mail or authenticator if the exchange asks.
+4. Wait. Withdrawals usually arrive in 2–15 minutes. New exchange accounts sometimes hold withdrawals for a few days after a bank deposit; the exchange shows a date if so.
+5. AVAX shows in MetaMask automatically once you are on the Avalanche C-Chain network.
 
-Alternatives if you already hold crypto elsewhere: MetaMask's own **Buy** button sells AVAX by card in many countries (choose Avalanche as the network); [Circle's bridge](https://bridge.circle.com) moves USDC between Ethereum, Base and Avalanche; the [Core bridge](https://core.app/bridge/) moves other assets to Avalanche.
+Faster alternative: MetaMask's own **Buy** button sells AVAX by card or bank transfer in many countries — choose **Avalanche** as the network and it lands directly in your wallet.
+
+If you would rather pay with **USDC**, withdraw native USDC the same way (network Avalanche C-Chain, not Ethereum or Solana) and import it in MetaMask under **Tokens → Import tokens → Custom token** with the contract `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E` (symbol and 6 decimals fill in; Avalanche also has an older bridged "USDC.e" — Verisphere uses the native one). You still need a little AVAX for gas. [Circle's bridge](https://bridge.circle.com) moves USDC between Ethereum, Base and Avalanche; the [Core bridge](https://core.app/bridge/) moves other assets to Avalanche.
 
 ### Step 4. Open the app and connect
 
@@ -68,15 +69,14 @@ Connecting is a permission, not a transaction: nothing moves and nothing is char
 
 VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it; the **Buy** button executes a swap on that pool from your own wallet — the site never holds your funds.
 
-1. Click **Buy** in the header. The **Buy VSP** window opens. Choose **Pay with AVAX** (the default — one transaction, no approval) or **USDC**. It shows your balance in the currency you pay with; if you have no AVAX at all, finish Step 3 first.
-2. **Paying with AVAX:** type the amount of AVAX to spend (**Max** leaves a little for gas). The window quotes how much VSP you receive, the minimum you will accept (a 0.5 % price move is tolerated while you confirm) and the price impact if it is noticeable. Click **Buy … VSP** — MetaMask opens **once**, for the swap itself. Confirm it; two seconds later the window shows **Done ✓**.
-3. **Paying with USDC:** type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance. Click **Preview Fill** to see how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (1 % tolerance).
-4. Then click **Buy … VSP**. MetaMask now opens **twice**:
-   - *"Approve in your wallet…"* — a request to let the pool take exactly this much USDC. Click **Confirm**. This is a real transaction: it uses a tiny amount of AVAX (a fraction of a cent) and confirms in about two seconds while the window says *"Waiting for approval…"*.
+1. Click **Buy** in the header. The **Buy VSP** window opens with **Pay with: AVAX** selected (switch to **USDC** if you brought USDC instead). It shows your balance in the asset you pay with; if you have no AVAX at all, finish Step 3 first.
+2. **Paying with AVAX** (the usual way): type the amount of AVAX to spend — **Max** leaves a little for gas. The window quotes how much VSP you receive, the minimum you will accept (a 0.5 % price move is tolerated while you confirm) and the price impact if it is noticeable. Click **Buy … VSP**. MetaMask opens **once**, with an ordinary transaction screen (it says **Confirm**, shows the AVAX amount and a small network fee). Confirm it; two seconds later the window shows **Done ✓**. No approval step: AVAX is the network's own coin, so nothing has to be permitted first.
+3. **Paying with USDC:** type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance. Click **Preview Fill** to see how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (1 % tolerance). Then click **Buy … VSP**. MetaMask opens **twice**:
+   - *"Approve in your wallet…"* — a **Spending cap request** letting the pool's router take exactly this much USDC. Click **Confirm**. This is a real transaction: it uses a tiny amount of AVAX and confirms in about two seconds while the window says *"Waiting for approval…"*.
    - *"Confirm the swap in your wallet…"* — the swap itself. Click **Confirm**. Another small AVAX fee, another two seconds (*"Swapping…"*).
-5. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, import it as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals.
+4. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, import it as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals.
 
-Every purchase asks for both confirmations (the approval covers exactly one swap). Gas on Avalanche is small: the two together cost well under 0.01 AVAX, so the 0.05 AVAX you brought covers many swaps.
+Where the VSP comes from: a public liquidity pool on the Trader Joe exchange (VSP/USDC). Paying with AVAX routes through Trader Joe's AVAX/USDC pool first, all inside one transaction, so two 0.3 % pool fees apply instead of one; paying with USDC is one pool fee plus the approval transaction. Gas on Avalanche is small — well under 0.01 AVAX per transaction — so 0.1 AVAX covers many swaps.
 
 ---
 
@@ -84,13 +84,13 @@ Every purchase asks for both confirmations (the approval covers exactly one swap
 
 ### What a Verisphere action looks like
 
-Inside Verisphere you never pay gas and MetaMask never shows **Confirm**; it shows **Signature request** instead. A relay submits the transaction for you and takes a small fee **in VSP** — its own cost of gas plus a fixed markup, the same for a large stake as for a small one. The progress box shows the fee before you sign, and it is taken only after the action has confirmed. Your first action can ask for up to three signatures in a row; after that, usually just one:
+Inside Verisphere you never pay gas. Nothing you sign here spends AVAX: a relay submits the transaction for you and takes a small fee **in VSP** — its own cost of gas plus a fixed markup, the same for a large stake as for a small one. The progress box shows the fee before you sign, and it is taken only after the action has confirmed. Your first action can ask for up to three wallet prompts in a row; after that, usually just one:
 
-1. permission for the protocol to use your VSP (once; it covers your future stakes),
-2. permission to take relay fees (once; it covers many actions),
-3. the action itself — the only signature you will normally see.
+1. **Permission for the protocol to use your VSP** — MetaMask shows this as a **Spending cap request**: spender = the Verisphere StakeEngine contract, cap = **10,000 VSP** (or twice your stake, if larger). It is a one-time permission, not a charge: only your own signed stakes can draw on it, and it is renewed only when it runs low.
+2. **Permission to take relay fees** — another **Spending cap request**: spender = the Verisphere relay wallet, cap = **100 VSP**, renewed when it drops below 10. Fees are drawn from this one small transfer at a time. Because the relay is a plain wallet address rather than a contract, MetaMask may add a caution to this one; the address shown should match the relay address on the [Fees](/docs/viewer.html?file=fees.md) page.
+3. **The action itself** — a **Signature request** naming the action (stake, claim, link). This is the only prompt you will normally see.
 
-Read each one — it names the token and the amount — and click **Sign**. While a request is open, a dark bar at the top of the page says so ("Signature request waiting in your wallet"); if the MetaMask window is not in front, click the MetaMask icon in your browser toolbar. A progress box then tracks the action ("Confirming … on chain"); it confirms in a few seconds and the page updates within about half a minute once the indexer has caught up. If you close MetaMask instead of signing, nothing happens and nothing is charged.
+Read each one — it names the token, the amount and who may spend it — and click **Confirm** (older MetaMask versions say **Sign**). None of these is a gas transaction: the AVAX line stays at zero. While a request is open, a dark bar at the top of the page says so and names the step ("1 of 2: Allow relay fees…"); if the MetaMask window is not in front, click the MetaMask icon in your browser toolbar. A progress box then tracks the action ("Confirming … on chain"); it confirms in a few seconds and the page updates within about half a minute once the indexer has caught up. If you close MetaMask instead of signing, nothing happens and nothing is charged.
 
 Creating a claim or a link *with an opening stake* is two actions in a row — first the post, then the stake — so expect two rounds of signature requests.
 
@@ -133,10 +133,12 @@ A link only affects its target while the source claim is credible (score above z
 
 ### Sell VSP and cash out
 
-1. Click **Sell** in the header. The **Sell VSP** window works exactly like buying: amount → **Preview Fill** → **Sell … VSP** → MetaMask **Confirm** twice (approve the VSP, then the swap). Two small AVAX fees.
-2. To move USDC back to an exchange, use MetaMask **Send**: paste the exchange's USDC deposit address *for Avalanche C-Chain* and send. Sending to an Ethereum deposit address loses the funds.
+1. Click **Sell** in the header. The **Sell VSP** window mirrors buying: choose **Receive: AVAX** (default) or **USDC**, enter the VSP to sell (**Max** for all of it), read the quote, click **Sell … VSP**.
+   - **For AVAX:** the first time, MetaMask opens twice — a **Spending cap request** letting the pool's router take VSP (a standing 10,000 VSP, so later sells skip this step; **Confirm**), then the swap itself (**Confirm**). After that, one prompt per sell. The AVAX lands in your wallet.
+   - **For USDC:** **Preview Fill** → **Sell … VSP** → **Confirm** twice (approve exactly this much VSP, then the swap).
+2. To move AVAX or USDC back to an exchange, use MetaMask **Send**: paste the exchange's deposit address *for Avalanche C-Chain* for that asset and send. Sending to an Ethereum deposit address loses the funds.
 
-Keep a little AVAX in the wallet for this; if MetaMask says "insufficient funds for gas", that is the AVAX balance, not your USDC or VSP.
+Keep a little AVAX in the wallet for gas; if MetaMask says "insufficient funds for gas", that is the AVAX balance, not your USDC or VSP.
 
 ---
 
@@ -186,12 +188,14 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 | Action | Where | What it costs | What you click in MetaMask |
 |--------|-------|---------------|----------------------------|
-| Get AVAX + USDC | Exchange → withdraw on Avalanche C-Chain | Exchange fees | — (confirm on the exchange) |
-| Buy VSP | **Buy** → Preview Fill → Buy | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
-| Stake / change / withdraw | The claim's stake box | Relay fee in VSP (shown first) | **Sign** ×1 (×3 the first time) |
-| Create claim | Explore → article → **+** | 1 VSP burned + stake + relay fee | **Sign** ×1 per step (claim, then stake) |
-| Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee | **Sign** ×1 per step (link, then stake) |
-| Sell VSP | **Sell** → Preview Fill → Sell | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
+| Get AVAX | Exchange → withdraw on Avalanche C-Chain (or MetaMask **Buy**) | Exchange fees | — (confirm on the exchange) |
+| Buy VSP with AVAX | **Buy** → amount → Buy | Pool fees 0.6 % (two pools) + tiny AVAX gas | **Confirm** ×1 (the swap) |
+| Buy VSP with USDC | **Buy** → USDC → Preview Fill → Buy | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
+| Stake / change / withdraw | The claim's stake box | Relay fee in VSP (shown first), no gas | Signature ×1 (×3 the first time: two spending caps + the action) |
+| Create claim | Explore → article → **+** | 1 VSP burned + stake + relay fee, no gas | Signature ×1 per step (claim, then stake) |
+| Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee, no gas | Signature ×1 per step (link, then stake) |
+| Sell VSP for AVAX | **Sell** → amount → Sell | Pool fees 0.6 % + tiny AVAX gas | **Confirm** ×2 the first time (standing approval, swap), then ×1 |
+| Sell VSP for USDC | **Sell** → USDC → Preview Fill → Sell | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
 
 ---
 
@@ -199,15 +203,17 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 **MetaMask doesn't show Avalanche.** Repeat Step 2; check the network menu reads Avalanche C-Chain.
 
-**My USDC or AVAX isn't showing.** Check the withdrawal used network Avalanche C-Chain; check you are looking at the same account you pasted into the exchange; import USDC as a custom token (Step 3.6). A withdrawal can take 15 minutes — look it up on [snowtrace.io](https://snowtrace.io) by pasting your address.
+**My AVAX or USDC isn't showing.** Check the withdrawal used network Avalanche C-Chain; check you are looking at the same account you pasted into the exchange; for USDC, import it as a custom token (Step 3). A withdrawal can take 15 minutes — look it up on [snowtrace.io](https://snowtrace.io) by pasting your address.
 
-**"This wallet has no AVAX" / "insufficient funds for gas".** Only buying and selling need AVAX. Send 0.05 AVAX to your wallet from the exchange (Step 3).
+**"This wallet has no AVAX" / "insufficient funds for gas".** Only buying and selling need AVAX, and the buy itself is paid in AVAX. Send 0.1 AVAX to your wallet from the exchange (Step 3).
 
 **The Buy or Sell button is missing.** Connect your wallet first; the buttons appear once you are connected and the pool is reachable.
 
-**The swap failed: "price moved beyond the 1 % slippage bound".** The pool moved while you were confirming. Click **Preview Fill** again and retry. Your USDC is still in the wallet.
+**The swap failed or MetaMask says the transaction would revert.** The pool moved more than the tolerance (0.5 % paying with AVAX, 1 % with USDC) while you were confirming. Re-enter the amount (or **Preview Fill** again) and retry. Your AVAX or USDC is still in the wallet; a failed transaction costs at most its small gas.
 
-**MetaMask shows "Signature request" — is that safe?** Inside Verisphere, yes: that is how gas-free actions work. Read the token and amount it names. Verisphere never asks you to sign a blank message or to approve an unlimited amount for an unknown address.
+**MetaMask shows "Spending cap request" or "Signature request" — is that safe?** Inside Verisphere, yes: that is how gas-free actions work. The two spending caps are the one-time permissions described above (10,000 VSP to the StakeEngine contract, 100 VSP to the relay wallet); the signature request is the action itself. Read the token, the amount and the spender. Verisphere never asks you to sign a blank message, never asks for an unlimited amount, and never asks you to send funds anywhere.
+
+**MetaMask flags the relay-fee spending cap as risky.** Wallet security tools flag any spending cap whose spender is a plain wallet address rather than a contract. The relay fee cap is 100 VSP and the address is Verisphere's relay, published on the [Fees](/docs/viewer.html?file=fees.md) page; compare the address before confirming. A dedicated fee contract is planned so that this prompt stops appearing.
 
 **"Insufficient VSP for relay fee: need …".** The message names the exact amount; you need that much on top of what you stake. Buy a little more.
 
