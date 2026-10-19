@@ -23,12 +23,12 @@
 
 4. Click **Save** and switch to Avalanche Fuji.
 
-## 3. Get Test AVAX (Optional)
+## 3. Get Test AVAX <!-- patch_fe_docs_avax -->
 
-You don't need AVAX to use Verisphere (gas is covered), but if you want some for other testing:
+Test AVAX is what you buy test VSP with (and it pays the gas for that swap); everything inside Verisphere is gas-free.
 
-1. Go to [faucet.avax.network](https://faucet.avax.network/).
-2. Paste your MetaMask wallet address and request test AVAX.
+1. Go to [faucet.avax.network](https://faucet.avax.network/) (it may ask for a coupon code or a mainnet balance — if it refuses, ask the project admin for test AVAX).
+2. Paste your MetaMask wallet address and request test AVAX. 1–2 AVAX is plenty.
 
 ## 4. Connect to Verisphere
 
@@ -37,16 +37,18 @@ You don't need AVAX to use Verisphere (gas is covered), but if you want some for
 3. MetaMask will pop up — approve the connection.
 4. Your wallet address and balances will appear in the header bar.
 
-## 5. Get Test USDC
+## 5. Buy VSP Tokens
 
-Ask the project admin to send test USDC to your wallet address. Copy your address from MetaMask (click the address at the top to copy it) and share it.
+1. Click **Buy** in the header bar. **Pay with: AVAX** is selected.
+2. Enter the amount of test AVAX to spend (start with 0.5 AVAX) and read the quote.
+3. Click **Buy … VSP**. MetaMask opens once with an ordinary transaction — **Confirm**.
+4. VSP appears in your header balance a couple of seconds later.
 
-## 6. Buy VSP Tokens
+(Paying with test USDC also works — ask the project admin for some — and takes two confirmations: an approval, then the swap.)
 
-1. Click **Buy @ X.XX** in the header bar.
-2. Enter the amount of USDC to spend (start with 10-20 USDC).
-3. MetaMask will ask you to sign a permit — approve it.
-4. VSP tokens appear in your balance immediately.
+## 6. What the wallet prompts look like
+
+Staking and creating claims never spend AVAX. The first action asks for up to three prompts: two **Spending cap requests** (10,000 VSP to the StakeEngine contract; 100 VSP to the relay wallet for fees) and the **Signature request** for the action itself. After that, one signature per action. Please count the prompts you get and report them.
 
 ## 7. Start Testing
 
