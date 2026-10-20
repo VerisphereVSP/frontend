@@ -2,11 +2,12 @@
 // Public-AMM era trade surface: pool price + a Swap link supplied by the
 // backend (swap_url). Replaces the MM buy/sell surface once the pool is live.
 import { useEffect, useState } from "react";
-import { useAccount, useBalance } from "wagmi";
+import { useAccount, useBalance, useChainId } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useContracts } from "../contracts";
 import { probePool, PoolState } from "../api/pool";
 import PoolTradeModal from "./PoolTradeModal";
+import AddVspToWallet from "./AddVspToWallet";  // patch_fe_add_vsp_wallet
 
 const REFRESH_MS = 30_000;
 
@@ -15,6 +16,7 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
   const [unavailable, setUnavailable] = useState(initial === null);
   const [side, setSide] = useState<"buy" | "sell" | null>(null);
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();  // patch_fe_add_vsp_wallet: explorer host for the pair link
   const { data: contracts } = useContracts();
   // patch_venue r6 (founder direction): header carries only what every
   // visitor needs — price, identity, VSP balance. AVAX (a swap-time gas
@@ -68,6 +70,7 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             {fmtBal(vspBal?.formatted)} VSP
           </span>
         )}
+        {isConnected && <AddVspToWallet token={contracts?.VSPToken} />}
         {state?.pair ? (
           <>
             {isConnected && (
@@ -127,12 +130,21 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
                       <span>{Math.round(state.vsp_circulating).toLocaleString()} VSP</span>
                     </div>
                   )}
+                  {/* patch_fe_add_vsp_wallet: the pair on the explorer of THIS chain; the venue's own page separately */}
                   <div style={{ marginTop: 4 }}>
-                    <a href={swapUrl || `https://testnet.snowtrace.io/address/${state.pair}`}
+                    <a href={`https://${chainId === 43114 ? "" : "testnet."}snowtrace.io/address/${state.pair}`}
                        target="_blank" rel="noopener noreferrer"
                        style={{ color: "#4f46e5" }}>
                       view pair on Snowtrace →
                     </a>
+                    {swapUrl && (
+                      <>
+                        {" · "}
+                        <a href={swapUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#4f46e5" }}>
+                          trade on the venue →
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

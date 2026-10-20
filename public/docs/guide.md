@@ -74,7 +74,7 @@ VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it;
 3. **Paying with USDC:** type an amount. The ⇄ button switches between entering VSP and entering USDC; **Max** fills in your whole USDC balance. Click **Preview Fill** to see how much VSP you receive, the pool's 0.3 % fee, and the minimum you will accept (1 % tolerance). Then click **Buy … VSP**. MetaMask opens **twice**:
    - *"Approve in your wallet…"* — a **Spending cap request** letting the pool's router take exactly this much USDC. Click **Confirm**. This is a real transaction: it uses a tiny amount of AVAX and confirms in about two seconds while the window says *"Waiting for approval…"*.
    - *"Confirm the swap in your wallet…"* — the swap itself. Click **Confirm**. Another small AVAX fee, another two seconds (*"Swapping…"*).
-4. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, import it as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals.
+4. The window shows **Done ✓** and your VSP balance in the header updates. To see VSP inside MetaMask as well, click **+ add VSP to wallet** next to the balance (one MetaMask prompt, **Add token**) — or import it manually as a custom token: `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`, symbol VSP, 18 decimals. <!-- patch_fe_add_vsp_wallet -->
 
 Where the VSP comes from: a public liquidity pool on the Trader Joe exchange (VSP/USDC). Paying with AVAX routes through Trader Joe's AVAX/USDC pool first, all inside one transaction, so two 0.3 % pool fees apply instead of one; paying with USDC is one pool fee plus the approval transaction. Gas on Avalanche is small — well under 0.01 AVAX per transaction — so 0.1 AVAX covers many swaps.
 
