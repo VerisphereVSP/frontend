@@ -1,13 +1,19 @@
 // frontend/src/components/AddVspToWallet.tsx — patch_fe_add_vsp_wallet
 // A small "add VSP to wallet" control next to the header balance: one wallet prompt, then it disappears for
 // this browser. Hidden when the wallet has already listed VSP (per-browser flag) or no wallet client is up.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWalletClient } from "wagmi";
 import { addVspToWallet, watchAssetDone } from "../web3/watchAsset";
 
 export default function AddVspToWallet({ token }: { token?: `0x${string}` }) {
   const { data: walletClient } = useWalletClient();
-  const [done, setDone] = useState(() => (token ? watchAssetDone(token) : false));
+  // patch_fe_add_vsp_wallet_2: the token address arrives asynchronously (useContracts), so the per-browser flag must be
+  // re-read when it changes — reading it once in the useState initializer saw `undefined` and showed the button on
+  // every page load even after a successful add.
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setDone(token ? watchAssetDone(token) : false);
+  }, [token]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   if (!token || !walletClient || done) return null;
