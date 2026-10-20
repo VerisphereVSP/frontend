@@ -48,7 +48,7 @@ Test AVAX is what you buy test VSP with (and it pays the gas for that swap); eve
 
 ## 6. What the wallet prompts look like
 
-Staking and creating claims never spend AVAX. The first action asks for up to three prompts: two **Spending cap requests** (10,000 VSP to the StakeEngine contract; 100 VSP to the relay wallet for fees) and the **Signature request** for the action itself. After that, one signature per action. Please count the prompts you get and report them.
+Staking and creating claims never spend AVAX. The first action asks for up to three prompts: two **Spending cap requests** (10,000 VSP to the StakeEngine contract; 100 VSP to the FeeCollector contract for fees) and the **Signature request** for the action itself. After that, one signature per action. Please count the prompts you get and report them.
 
 ## 7. Start Testing
 
