@@ -213,6 +213,8 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 **MetaMask shows "Spending cap request" or "Signature request" — is that safe?** Inside Verisphere, yes: that is how gas-free actions work. The two spending caps are the one-time permissions described above (10,000 VSP to the StakeEngine contract, 100 VSP to the FeeCollector contract); the signature request is the action itself. Read the token, the amount and the spender. Verisphere never asks you to sign a blank message, never asks for an unlimited amount, and never asks you to send funds anywhere.
 
+**MetaMask says "This action will edit tokens that are already listed" when adding VSP.** The token is already in that account's list (added earlier, or by another account on the same network); adding it again changes nothing — **Add token** or **Cancel**, both fine.
+
 **MetaMask flags a spending cap as risky.** Wallet security tools flag spending caps whose spender is a plain wallet address or an unknown contract. Verisphere's spenders are verified contracts: the StakeEngine (`0x19862B3790e455d88920630Bbc4012A0F195D7C9`) and the FeeCollector (`0x7bdD96Bd5125e4B105c2B05BF3a149E9AFc8AAaD`) — compare the address before confirming. If you signed a fee permission before 2026-10-20 it may name the relay's wallet address instead; that older permission is still honoured for a while, and your next action asks for the contract one.
 
 **"Insufficient VSP for relay fee: need …".** The message names the exact amount; you need that much on top of what you stake. Buy a little more.
