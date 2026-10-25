@@ -260,7 +260,7 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
       {summary && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-            <StatBox label="TOTAL STAKED" value={`${summary.total_staked.toFixed(2)} VSP`} sub={`${positions.length} positions`} />
+            <StatBox label="TOTAL STAKED" value={`${summary.total_staked.toFixed(4)} VSP`} sub={`${positions.length} positions`} />{/* patch_fe_positions_decimals: 4 decimals — daily settlement moves a small stake in the 4th place */}
             <StatBox label="WINNING" value={String(summary.winning_count)} sub={`${summary.total_support.toFixed(2)} support`} color={S.green} />
             <StatBox label="LOSING" value={String(summary.losing_count)} sub={`${summary.total_challenge.toFixed(2)} challenge`} color={S.red} />
             <StatBox label="OVERALL APR" value={`${summary.weighted_apr > 0 ? "+" : ""}${summary.weighted_apr.toFixed(1)}%`} sub="weighted average" color={summary.weighted_apr > 0 ? S.green : S.red} />
@@ -400,7 +400,7 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
                     {p.pool_challenge > 0 ? p.pool_challenge.toFixed(1) : "—"}
                   </div>
                   <div style={{ padding: "8px 4px", textAlign: "right", fontWeight: 500, color: S.text }}>
-                    {p.user_total.toFixed(2)}
+                    {p.user_total.toFixed(4)}{/* patch_fe_positions_decimals */}
                   </div>
                   <div style={{ padding: "8px 6px 8px 4px", textAlign: "right", color: statusColor, fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const }}>
                     {p.position_status === "winning" ? "WIN" :
