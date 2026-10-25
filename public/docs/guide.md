@@ -1,6 +1,6 @@
 # How to Play Verisphere
 
-<!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax -->
+<!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax --><!-- patch_fe_docs_ext_phone -->
 
 Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. If the claim holds up, you earn; if it doesn't, you lose. What counts as credible is decided by what people are willing to stake, not by votes or likes.
 
@@ -8,7 +8,8 @@ This guide takes you from nothing to your first stake. If you have never used a 
 
 **What you will need**
 
-- A desktop browser (Chrome, Firefox, Brave or Edge) with the MetaMask extension.
+- A desktop browser (Chrome, Firefox, Brave or Edge) with the MetaMask extension — or a phone with the MetaMask app (see **On a phone** below).
+- Optional: the **Verisphere Chrome extension** ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok); Chrome, Brave and Edge) — it underlines the stakeable claims in any English Wikipedia article and lets you stake from the page. See **Verisphere on Wikipedia** in Part 2.
 - Some **AVAX**, the Avalanche network's own coin. It does two jobs: it is what you **buy VSP with** (the default), and it pays the network fee ("gas") for the buy and sell transactions — a fraction of a cent each. **0.1 AVAX** is enough to buy a starter amount of VSP and leave gas to spare. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free.
 - Optional: **USDC**, a dollar-pegged stablecoin. You can pay for VSP with USDC instead of AVAX if you already hold some on Avalanche; you still need a little AVAX for gas.
 
@@ -65,6 +66,17 @@ If you would rather pay with **USDC**, withdraw native USDC the same way (networ
 
 Connecting is a permission, not a transaction: nothing moves and nothing is charged.
 
+### On a phone
+
+The app works in Safari or Chrome on iPhone and Android with the **MetaMask app** installed:
+
+1. In MetaMask (phone), add Avalanche once: **☰ → Settings → Networks → Add network → Popular networks → Avalanche C-Chain → Approve**. Your tokens list shows a network badge on each token; the filter above the list lets you pick Avalanche C-Chain.
+2. Open [app.verisphere.co](https://app.verisphere.co) in the phone's browser → **Connect Wallet** → **MetaMask**. The phone switches to the MetaMask app with a connect request; approve it and switch back to the browser.
+3. If tapping MetaMask does nothing: update the MetaMask app, then try again; or open the app *inside* MetaMask's own browser (**☰ → Browser**, type `app.verisphere.co`), which always works; or choose the **WalletConnect** tile and scan from MetaMask.
+4. VSP in the phone wallet: after a buy, tap **+ add VSP to wallet** in the app header (one prompt, **Add token**), or in MetaMask scroll to the bottom of the tokens list → **Import tokens → Custom token** → network Avalanche C-Chain, address `0x0273B4D58E8991f71fC28d0377424d03d7c3b173`.
+
+Every prompt is the same as on desktop (spending caps, signature requests, AVAX transactions), shown in the MetaMask app instead of a browser pop-up.
+
 ### Step 5. Buy VSP
 
 VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it; the **Buy** button executes a swap on that pool from your own wallet — the site never holds your funds.
@@ -102,6 +114,10 @@ The header has four pages:
 - **Claims** — every claim and link on-chain, searchable, with its score, stake and evidence links. This is where you create links.
 - **Positions** — everything you have staked, with the score, rate and status of each position (connect your wallet to see it).
 - **Transactions** — the history of your actions, each with a link to the transaction on [snowtrace.io](https://snowtrace.io).
+
+### Verisphere on Wikipedia (extension)
+
+The **Verisphere — Truth-staking for Wikipedia** extension ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok)) brings the same game to Wikipedia. Install it in Chrome, Brave or Edge, open any English Wikipedia article, and the sentences that state a claim already on Verisphere are **underlined**; click one to open the side panel with the claim's score and stake, and stake on it or challenge it there. Select a sentence nobody has staked on yet and the panel offers to **create the claim** from it; a sentence that states several claims offers all of them. The panel uses the same wallet, the same permissions and the same prompts as the app — it never holds keys or funds — and it reads from `app.verisphere.co`, so what you do there appears in **Positions** and **Transactions** here. Firefox and phones: use the app; the extension is desktop Chromium only for now.
 
 ### Stake on a claim
 
@@ -196,12 +212,19 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 | Create link | Claims → Incoming / Outgoing Links | 1 VSP burned + stake + relay fee, no gas | Signature ×1 per step (link, then stake) |
 | Sell VSP for AVAX | **Sell** → amount → Sell | Pool fees 0.6 % + tiny AVAX gas | **Confirm** ×2 the first time (standing approval, swap), then ×1 |
 | Sell VSP for USDC | **Sell** → USDC → Preview Fill → Sell | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
+| Stake from Wikipedia | Extension → underlined sentence → side panel | Same as staking in the app | Same prompts as in the app |
 
 ---
 
 ## Troubleshooting
 
-**MetaMask doesn't show Avalanche.** Repeat Step 2; check the network menu reads Avalanche C-Chain.
+**MetaMask doesn't show Avalanche.** Repeat Step 2; check the network menu reads Avalanche C-Chain. On a phone: **☰ → Settings → Networks → Add network → Popular networks → Avalanche C-Chain**.
+
+**On my phone, tapping MetaMask in Connect Wallet does nothing.** Update the MetaMask app and retry; or open `app.verisphere.co` inside MetaMask's own browser (**☰ → Browser**); or use the **WalletConnect** tile. See **On a phone** in Part 1.
+
+**My phone wallet shows Ethereum, not my VSP.** The token list is filtered to another network: pick Avalanche C-Chain in the filter above the list (add the network first if it is missing), then import VSP (**+ add VSP to wallet** in the app, or Import tokens in MetaMask). USDC on Ethereum is not USDC on Avalanche — the app only sees Avalanche balances.
+
+**The extension shows no claims / the wrong network.** Make sure it is the Web Store build 0.1.3 or later (`chrome://extensions` → Details → Site access lists `app.verisphere.co`); an older build pointed at the test network. Reload the Wikipedia page after installing.
 
 **My AVAX or USDC isn't showing.** Check the withdrawal used network Avalanche C-Chain; check you are looking at the same account you pasted into the exchange; for USDC, import it as a custom token (Step 3). A withdrawal can take 15 minutes — look it up on [snowtrace.io](https://snowtrace.io) by pasting your address.
 

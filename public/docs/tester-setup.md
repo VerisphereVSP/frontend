@@ -1,5 +1,8 @@
 # Verisphere Tester Setup Guide
 
+<!-- patch_fe_docs_ext_phone -->
+> This page is the **test-network** (Avalanche Fuji) setup for testers. Everyday players: follow [How to Play](viewer.html?file=guide.md) instead — it covers the live network, phones and the [Chrome extension](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok).
+
 ## 1. Install MetaMask
 
 1. Go to [metamask.io](https://metamask.io) and click **Download**.
