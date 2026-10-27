@@ -33,10 +33,12 @@ describe("ShareClaim", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     await act(async () => { screen.getByTestId("share-claim").click(); });
     await waitFor(() => expect(screen.getByTestId("share-menu")).toBeTruthy());
-    await waitFor(() => expect(screen.getByAltText(/Verisnap of claim #142/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByAltText(/Verisphere Snapshot of claim #142/)).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/Mostly supported · 72 % of stake backs this claim/)).toBeTruthy();
     expect((screen.getByLabelText("Share link") as HTMLInputElement).value).toBe(SNAP.share_url);
+    expect(document.body.textContent).not.toContain("Verisnap");  // patch_snapshot_naming
+    expect(screen.getByTestId("share-claim").getAttribute("title")).not.toContain("Verisnap");
   });
 
   it("copies the share link and the text form", async () => {

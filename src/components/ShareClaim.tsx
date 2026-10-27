@@ -1,4 +1,4 @@
-// patch_fe_verisnap_share / patch_fe_share_prominent — Share a claim as a Verisnap: copy the share link (unfurls into the card), the text form,
+// patch_fe_verisnap_share / patch_fe_share_prominent — Share a claim as a Verisphere Snapshot (patch_snapshot_naming: the "Verisnap" working name is retired): copy the share link (unfurls into the card), the text form,
 // or the card image. Reads the app's snapshot endpoint (app PR #46) lazily when opened; nothing is rendered until then.
 import { useEffect, useRef, useState } from "react";
 import { S } from "./claims-shared";
@@ -120,7 +120,7 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
         type="button"
         data-testid="share-claim"
         onClick={(e) => { stop(e); setOpen((o) => !o); }}
-        title="Share this claim as a Verisnap (link, text or image)"
+        title="Share a snapshot of this claim (link, text or image)"
         aria-label={variant === "icon" ? "Share this claim" : undefined}
         style={trigger}
       >{variant === "icon" ? <ShareIcon size={11} /> : <><ShareIcon /> Share</>}</button>
@@ -141,7 +141,7 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
             <>
               <img
                 src={snap.card_url}
-                alt={`Verisnap of claim #${snap.post_id}: ${snap.band}`}
+                alt={`Verisphere Snapshot of claim #${snap.post_id}: ${snap.band}`}
                 style={{ width: "100%", height: "auto", borderRadius: 8, border: `1px solid ${S.borderLight}` }}
               />
               <div style={{ color: S.textMuted }}>{snap.band} · {snap.stake_line}</div>
