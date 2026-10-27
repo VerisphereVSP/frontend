@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
 import Jazzicon from "./Jazzicon";
+import ShareClaim from "./ShareClaim";  // patch_fe_verisnap_share
 import VSBar from "./VSBar";
 import StakeControl from "./StakeControl";
 import ClaimPickerModal from "./article/ClaimPickerModal";
@@ -386,6 +387,7 @@ export function ExpandedClaimDetail({
           title="Report this claim to Verisphere (opens your e-mail client). See the content policy in the footer."
           style={{ fontSize: 10, color: S.textFaint, marginLeft: 8 }}
         >Report</a>
+        <ShareClaim postId={c.post_id} />{/* patch_fe_verisnap_share */}
         <span
           onClick={onClose}
           title="Close"
