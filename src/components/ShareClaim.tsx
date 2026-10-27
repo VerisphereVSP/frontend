@@ -1,4 +1,4 @@
-// patch_fe_verisnap_share — Share a claim as a Verisnap: copy the share link (unfurls into the card), the text form,
+// patch_fe_verisnap_share / patch_fe_share_prominent — Share a claim as a Verisnap: copy the share link (unfurls into the card), the text form,
 // or the card image. Reads the app's snapshot endpoint (app PR #46) lazily when opened; nothing is rendered until then.
 import { useEffect, useRef, useState } from "react";
 import { S } from "./claims-shared";
@@ -57,7 +57,19 @@ async function copyImage(url: string): Promise<"copied" | "opened" | "failed"> {
   }
 }
 
-export default function ShareClaim({ postId }: { postId: number }) {
+const ShareIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+    <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+  </svg>
+);
+
+/**
+ * variant "button": the prominent violet Share button (claim detail rows — Claims, Positions);
+ * "icon": a small icon-only control that sits after the VS pill inside a sentence (Explore);
+ * "link": the quiet text form.
+ */
+export default function ShareClaim({ postId, variant = "button" }: { postId: number; variant?: "button" | "icon" | "link" }) {
   const [open, setOpen] = useState(false);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,22 +104,33 @@ export default function ShareClaim({ postId }: { postId: number }) {
     color: S.text, fontSize: 11, fontWeight: 600, cursor: "pointer",
   };
 
+  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
+  const trigger: React.CSSProperties =
+    variant === "button"
+      ? { display: "inline-flex", alignItems: "center", gap: 6, height: 28, padding: "0 12px", borderRadius: 999, border: "1px solid #5B4BC4",
+          background: open ? "#37299B" : "#5B4BC4", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }
+      : variant === "icon"
+      ? { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 14, padding: 0, borderRadius: 3,
+          border: "1px solid #D9D4F0", background: open ? "#EDEAFB" : "#fff", color: "#5B4BC4", cursor: "pointer", verticalAlign: "middle" }
+      : { background: "transparent", border: 0, padding: 0, fontSize: 11, color: S.textMuted, cursor: "pointer", textDecoration: open ? "underline" : "none" };
+
   return (
-    <span ref={boxRef} style={{ position: "relative", marginLeft: 8 }}>
+    <span ref={boxRef} onClick={stop} onMouseDown={stop} style={{ position: "relative", display: "inline-block", marginLeft: variant === "icon" ? 3 : 0, verticalAlign: variant === "icon" ? "middle" : undefined }}>
       <button
         type="button"
         data-testid="share-claim"
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => { stop(e); setOpen((o) => !o); }}
         title="Share this claim as a Verisnap (link, text or image)"
-        style={{ background: "transparent", border: 0, padding: 0, fontSize: 10, color: S.textFaint, cursor: "pointer", textDecoration: open ? "underline" : "none" }}
-      >Share</button>
+        aria-label={variant === "icon" ? "Share this claim" : undefined}
+        style={trigger}
+      >{variant === "icon" ? <ShareIcon size={11} /> : <><ShareIcon /> Share</>}</button>
       {open && (
         <div
           role="dialog"
           aria-label="Share this claim"
           data-testid="share-menu"
           style={{
-            position: "absolute", right: 0, top: 18, zIndex: 20, width: 320, background: "#fff",
+            position: "absolute", left: 0, top: variant === "icon" ? 18 : 32, zIndex: 20, width: 320, background: "#fff",
             border: `1px solid ${S.border}`, borderRadius: 10, boxShadow: "0 10px 30px -12px rgba(28,21,51,.35)", padding: 12,
             display: "flex", flexDirection: "column", gap: 10, fontSize: 11, color: S.text,
           }}

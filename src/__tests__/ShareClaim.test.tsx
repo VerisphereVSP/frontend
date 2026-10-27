@@ -50,11 +50,23 @@ describe("ShareClaim", () => {
     expect(written[1]).toBe(SNAP.share_text);
   });
 
+  it("the icon variant is labelled and does not propagate clicks to the sentence/row behind it", async () => {
+    const outer = vi.fn();
+    render(<div onClick={outer}><ShareClaim postId={142} variant="icon" /></div>);
+    const btn = screen.getByTestId("share-claim");
+    expect(btn.getAttribute("aria-label")).toBe("Share this claim");
+    await act(async () => { btn.click(); });
+    expect(outer).not.toHaveBeenCalled();
+    await waitFor(() => screen.getByTestId("share-menu"));
+  });
+
   it("the claims view honours the /claims?post=<id> deep link", () => {
     const src = readFileSync(resolve(process.cwd(), "src/components/ClaimsExplorer.tsx"), "utf8");
     expect(src).toContain('new URLSearchParams(window.location.search).get("post")');
     expect(src).toContain("patch_fe_verisnap_share");
     const shared = readFileSync(resolve(process.cwd(), "src/components/claims-shared.tsx"), "utf8");
-    expect(shared).toContain("<ShareClaim postId={c.post_id} />");
+    expect(shared).toContain('<ShareClaim postId={c.post_id} variant="button" />');
+    const article = readFileSync(resolve(process.cwd(), "src/components/article/ArticleView.tsx"), "utf8");
+    expect((article.match(/<ShareClaim postId=\{s\.post_id\} variant="icon" \/>/g) || []).length).toBe(2);  // both Explore lanes
   });
 });
