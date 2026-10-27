@@ -10,6 +10,7 @@ import StakeInput from "./StakeInput";
 import { fireTxProgress } from "./TxProgress";
 import InlineClaimCard from "./InlineClaimCard";
 import VSBar from "../VSBar";
+import ShareClaim from "../ShareClaim";  // patch_fe_share_prominent
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -531,7 +532,7 @@ export default function ArticleView({
                           {s.text}
                           {onC && (
                             <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3, gap: 3 }}>
-                              <VSBar vs={vs} width={40} height={12} />
+                              <VSBar vs={vs} width={40} height={12} />{s.post_id != null && <ShareClaim postId={s.post_id} variant="icon" />}{/* patch_fe_share_prominent */}
                               {(s as any).dupe_count > 1 && (
                                 <span style={{
                                   fontSize: 9, padding: "0 4px", borderRadius: 6,
@@ -737,7 +738,7 @@ export default function ArticleView({
                               {s.text}
                               {s.post_id != null && (
                                 <span style={{ display: "inline-flex", verticalAlign: "middle", marginLeft: 3, gap: 3 }}>
-                                  <VSBar vs={vs} width={40} height={12} />
+                                  <VSBar vs={vs} width={40} height={12} />{s.post_id != null && <ShareClaim postId={s.post_id} variant="icon" />}{/* patch_fe_share_prominent */}
                                   {(s as any).dupe_count > 1 && (
                                     <span style={{
                                       fontSize: 9, padding: "0 4px", borderRadius: 6,

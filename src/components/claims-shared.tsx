@@ -356,24 +356,34 @@ export function ExpandedClaimDetail({
           label="Your stake on this claim:"
         />
         <span
-          style={{ fontSize: 10, color: S.textFaint, cursor: "pointer", marginLeft: "auto", textDecoration: linksMode === "incoming" ? "underline" : "none" }}
+          onClick={onClose}
+          title="Close"
+          style={{ cursor: "pointer", fontSize: 14, color: S.textFaint, marginLeft: "auto", padding: "0 4px" }}
+        >✕</span>
+      </div>
+
+      {/* patch_fe_share_prominent: the claim's actions, left-aligned under the stake row — Share first, as a button */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10, flexWrap: "wrap" }}>
+        <ShareClaim postId={c.post_id} variant="button" />{/* patch_fe_verisnap_share */}
+        <span
+          style={{ fontSize: 12, fontWeight: 500, color: linksMode === "incoming" ? S.text : S.textMuted, cursor: "pointer", textDecoration: linksMode === "incoming" ? "underline" : "none" }}
           onClick={() => setLinksMode(linksMode === "incoming" ? "none" : "incoming")}
         >Incoming Links</span>
         <span
-          style={{ fontSize: 10, color: S.textFaint, cursor: "pointer", marginLeft: 4, textDecoration: linksMode === "outgoing" ? "underline" : "none" }}
+          style={{ fontSize: 12, fontWeight: 500, color: linksMode === "outgoing" ? S.text : S.textMuted, cursor: "pointer", textDecoration: linksMode === "outgoing" ? "underline" : "none" }}
           onClick={() => setLinksMode(linksMode === "outgoing" ? "none" : "outgoing")}
         >Outgoing Links</span>
         <span
-          style={{ fontSize: 10, color: S.textFaint, cursor: "pointer", marginLeft: 4, textDecoration: showQueue ? "underline" : "none" }}
+          style={{ fontSize: 12, fontWeight: 500, color: showQueue ? S.text : S.textMuted, cursor: "pointer", textDecoration: showQueue ? "underline" : "none" }}
           onClick={() => setShowQueue(!showQueue)}
         >{showQueue ? "Hide queues" : "Queues"}</span>
         {c.dupe_member_count && c.dupe_member_count > 1 && (
           <span
             style={{
-              fontSize: 10, cursor: "pointer", marginLeft: 4,
-              color: showDupes ? "#92400e" : S.textFaint,
+              fontSize: 12, cursor: "pointer",
+              color: showDupes ? "#92400e" : S.textMuted,
               textDecoration: showDupes ? "underline" : "none",
-              fontWeight: showDupes ? 600 : 400,
+              fontWeight: showDupes ? 600 : 500,
             }}
             onClick={() => setShowDupes(!showDupes)}
           >Duplicates ({(c.dupe_member_count || 0) - 1})</span>
@@ -385,14 +395,8 @@ export function ExpandedClaimDetail({
             `Claim #${c.post_id}\n\n"${c.text || ""}"\n\nWhy you are reporting it (what policy it breaks):\n\n`,
           )}`}
           title="Report this claim to Verisphere (opens your e-mail client). See the content policy in the footer."
-          style={{ fontSize: 10, color: S.textFaint, marginLeft: 8 }}
+          style={{ fontSize: 12, fontWeight: 500, color: S.textMuted }}
         >Report</a>
-        <ShareClaim postId={c.post_id} />{/* patch_fe_verisnap_share */}
-        <span
-          onClick={onClose}
-          title="Close"
-          style={{ cursor: "pointer", fontSize: 14, color: S.textFaint, marginLeft: 12, padding: "0 4px" }}
-        >✕</span>
       </div>
 
       {/* Queue view */}
