@@ -132,8 +132,13 @@ export default function ClaimsExplorer() {
     else { setSortKey(key); setSortDir(key === "text" || key === "topic" ? "asc" : "desc"); }
   };
 
-  // Pick up cross-view navigation target on mount
+  // Pick up cross-view navigation target on mount — or a deep link: /claims?post=<id> (the Verisnap share page's
+  // "Open claim" button, patch_fe_verisnap_share) lands on that claim, expanded and scrolled into view.
   useEffect(() => {
+    if ((window as any).__claimsGoto == null) {
+      const q = new URLSearchParams(window.location.search).get("post");
+      if (q && /^\d+$/.test(q)) (window as any).__claimsGoto = Number(q);
+    }
     const pending = (window as any).__claimsGoto;
     if (pending != null && dedupClaims.length > 0) {
       (window as any).__claimsGoto = undefined;

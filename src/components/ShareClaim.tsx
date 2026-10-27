@@ -1,0 +1,156 @@
+// patch_fe_verisnap_share — Share a claim as a Verisnap: copy the share link (unfurls into the card), the text form,
+// or the card image. Reads the app's snapshot endpoint (app PR #46) lazily when opened; nothing is rendered until then.
+import { useEffect, useRef, useState } from "react";
+import { S } from "./claims-shared";
+
+const API = import.meta.env.VITE_API_BASE || "/api";
+
+export type Snapshot = {
+  post_id: number;
+  text: string;
+  verity_score: number;
+  band: string;
+  band_role: "support" | "challenge" | "neutral";
+  support_pct: number | null;
+  stake_line: string;
+  total_stake: number;
+  snapshot_at: string;
+  share_url: string;
+  card_url: string;
+  app_url: string;
+  share_text: string;
+};
+
+export async function fetchSnapshot(postId: number): Promise<Snapshot> {
+  const r = await fetch(`${API}/claims/${postId}/snapshot`);
+  if (!r.ok) throw new Error(`snapshot ${r.status}`);
+  return r.json();
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Copies the PNG to the clipboard where the browser allows it (Chromium, Safari 13.1+); otherwise opens it. */
+async function copyImage(url: string): Promise<"copied" | "opened" | "failed"> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const Item = (window as any).ClipboardItem;
+    if (Item && navigator.clipboard && (navigator.clipboard as any).write) {
+      await (navigator.clipboard as any).write([new Item({ "image/png": blob })]);
+      return "copied";
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    window.open(url, "_blank", "noopener");
+    return "opened";
+  } catch {
+    return "failed";
+  }
+}
+
+export default function ShareClaim({ postId }: { postId: number }) {
+  const [open, setOpen] = useState(false);
+  const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || snap) return;
+    let alive = true;
+    fetchSnapshot(postId)
+      .then((s) => { if (alive) setSnap(s); })
+      .catch(() => { if (alive) setError("Snapshot unavailable right now."); });
+    return () => { alive = false; };
+  }, [open, postId, snap]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const flash = (msg: string) => {
+    setNote(msg);
+    setTimeout(() => setNote(null), 1800);
+  };
+
+  const btn: React.CSSProperties = {
+    height: 30, padding: "0 10px", borderRadius: 7, border: `1px solid ${S.border}`, background: "#fff",
+    color: S.text, fontSize: 11, fontWeight: 600, cursor: "pointer",
+  };
+
+  return (
+    <span ref={boxRef} style={{ position: "relative", marginLeft: 8 }}>
+      <button
+        type="button"
+        data-testid="share-claim"
+        onClick={() => setOpen((o) => !o)}
+        title="Share this claim as a Verisnap (link, text or image)"
+        style={{ background: "transparent", border: 0, padding: 0, fontSize: 10, color: S.textFaint, cursor: "pointer", textDecoration: open ? "underline" : "none" }}
+      >Share</button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Share this claim"
+          data-testid="share-menu"
+          style={{
+            position: "absolute", right: 0, top: 18, zIndex: 20, width: 320, background: "#fff",
+            border: `1px solid ${S.border}`, borderRadius: 10, boxShadow: "0 10px 30px -12px rgba(28,21,51,.35)", padding: 12,
+            display: "flex", flexDirection: "column", gap: 10, fontSize: 11, color: S.text,
+          }}
+        >
+          {error && <div style={{ color: S.red }}>{error}</div>}
+          {!snap && !error && <div style={{ color: S.textFaint }}>Preparing the snapshot…</div>}
+          {snap && (
+            <>
+              <img
+                src={snap.card_url}
+                alt={`Verisnap of claim #${snap.post_id}: ${snap.band}`}
+                style={{ width: "100%", height: "auto", borderRadius: 8, border: `1px solid ${S.borderLight}` }}
+              />
+              <div style={{ color: S.textMuted }}>{snap.band} · {snap.stake_line}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <button type="button" style={{ ...btn, background: "#5B4BC4", color: "#fff", borderColor: "#5B4BC4" }}
+                  data-testid="share-copy-link"
+                  onClick={async () => flash((await copyText(snap.share_url)) ? "Link copied" : "Could not copy — select the link below")}
+                >Copy link</button>
+                <button type="button" style={btn} data-testid="share-copy-text"
+                  onClick={async () => flash((await copyText(snap.share_text)) ? "Text copied" : "Could not copy")}
+                >Copy text</button>
+                <button type="button" style={btn} data-testid="share-copy-image"
+                  onClick={async () => {
+                    const r = await copyImage(snap.card_url);
+                    flash(r === "copied" ? "Image copied" : r === "opened" ? "Image opened in a new tab" : "Could not copy the image");
+                  }}
+                >Copy image</button>
+                <a href={snap.share_url} target="_blank" rel="noopener" style={{ ...btn, display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>Open share page</a>
+              </div>
+              <input
+                readOnly
+                aria-label="Share link"
+                value={snap.share_url}
+                onFocus={(e) => e.currentTarget.select()}
+                style={{ width: "100%", boxSizing: "border-box", fontSize: 11, padding: "6px 8px", border: `1px solid ${S.borderLight}`, borderRadius: 6, color: S.textMuted, fontFamily: "ui-monospace, Menlo, monospace" }}
+              />
+              <div style={{ color: S.textFaint, fontSize: 10 }}>The link unfurls into the card on X, Discord, WhatsApp, Slack and most sites. Snapshot {snap.snapshot_at.replace("T", " ").replace("Z", " UTC")}.</div>
+            </>
+          )}
+          {note && <div data-testid="share-note" style={{ color: S.green, fontWeight: 600 }}>{note}</div>}
+        </div>
+      )}
+    </span>
+  );
+}
