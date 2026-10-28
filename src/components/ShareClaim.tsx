@@ -45,33 +45,36 @@ export function snapshotHtml(snap: Snapshot): string {
 const blobOf = (s: string, type: string) => new Blob([s], { type });
 
 /**
- * One clipboard write with three representations. Values are promises so Safari keeps the user activation while the
- * PNG downloads. Falls back to text + HTML when the image cannot be fetched, and to plain text where ClipboardItem is
- * missing (older Firefox) — the text's link still unfurls into the card.
+ * One clipboard write with two representations: text/plain (the text form) and text/html (the card image linked to
+ * the share page + the text with its link live). Rich editors take the HTML, chat boxes take the text and unfurl its
+ * link into the card. patch_fe_share_fixes: the PNG is no longer part of this write — chat apps (WhatsApp Web) treat a
+ * pasted image as an upload and attach it instead of unfurling the link, and that upload failed; the image stays one
+ * click away under "Copy image" and rides the native share sheet on phones. Falls back to plain text where
+ * ClipboardItem is missing (older Firefox).
  */
-export async function copySnapshot(snap: Snapshot): Promise<"full" | "text+html" | "text" | "failed"> {
+export async function copySnapshot(snap: Snapshot): Promise<"full" | "text" | "failed"> {
   const Item = (window as any).ClipboardItem;
   const clip: any = navigator.clipboard;
   if (Item && clip && clip.write) {
-    const png = fetch(snap.card_url).then((r) => { if (!r.ok) throw new Error(`card ${r.status}`); return r.blob(); });
     try {
       await clip.write([new Item({
         "text/plain": blobOf(snap.share_text, "text/plain"),
         "text/html": blobOf(snapshotHtml(snap), "text/html"),
-        "image/png": png,
       })]);
       return "full";
-    } catch {
-      try {
-        await clip.write([new Item({
-          "text/plain": blobOf(snap.share_text, "text/plain"),
-          "text/html": blobOf(snapshotHtml(snap), "text/html"),
-        })]);
-        return "text+html";
-      } catch { /* fall through */ }
-    }
+    } catch { /* fall through */ }
   }
   return (await copyText(snap.share_text)) ? "text" : "failed";
+}
+
+// patch_fe_share_fixes — opening the Share menu from somewhere else (the small icon in Explore): the icon no longer
+// opens a menu of its own inside the sentence (it was clipped by the scrollable Disputed box); it asks the page to
+// open the claim and the claim's own Share button opens. A module-level "pending" covers the mount race: the button
+// may not exist yet when the icon is clicked, so it also checks on mount.
+let pendingOpen: number | null = null;
+export function requestShareOpen(postId: number) {
+  pendingOpen = postId;
+  window.dispatchEvent(new CustomEvent("verisphere:share-open", { detail: { postId } }));
 }
 
 export function canNativeShare(): boolean {
@@ -145,13 +148,28 @@ const ShareIcon = ({ size = 14 }: { size?: number }) => (
  * variant "button": the prominent violet Share button (claim detail rows — Claims, Positions);
  * "icon": a small icon-only control that sits after the VS pill inside a sentence (Explore);
  * "link": the quiet text form.
+ * patch_fe_share_fixes: the icon variant opens no menu of its own — it calls onActivate (the page opens the claim) and
+ * asks the claim's Share button to open; every copy action confirms on the button itself ("Copied ✓") and in a note
+ * directly under the buttons; Copy snapshot writes text + HTML (no PNG — see copySnapshot).
  */
-export default function ShareClaim({ postId, variant = "button" }: { postId: number; variant?: "button" | "icon" | "link" }) {
+export default function ShareClaim({ postId, variant = "button", onActivate }: { postId: number; variant?: "button" | "icon" | "link"; onActivate?: () => void }) {
   const [open, setOpen] = useState(false);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);  // which button just succeeded (shows "Copied ✓")
   const boxRef = useRef<HTMLDivElement>(null);
+
+  // the claim's Share button opens when the small icon elsewhere asked for it (now, or just before this mounted)
+  useEffect(() => {
+    if (variant === "icon") return;
+    if (pendingOpen === postId) { pendingOpen = null; setOpen(true); }
+    const onAsk = (e: Event) => {
+      if ((e as CustomEvent).detail?.postId === postId) { pendingOpen = null; setOpen(true); }
+    };
+    window.addEventListener("verisphere:share-open", onAsk);
+    return () => window.removeEventListener("verisphere:share-open", onAsk);
+  }, [postId, variant]);
 
   useEffect(() => {
     if (!open || snap) return;
@@ -171,15 +189,19 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const flash = (msg: string) => {
+  const flash = (msg: string, key: string | null = null) => {
     setNote(msg);
-    setTimeout(() => setNote(null), 1800);
+    setDone(key);
+    setTimeout(() => { setNote(null); setDone(null); }, 2200);
   };
 
   const btn: React.CSSProperties = {
     height: 30, padding: "0 10px", borderRadius: 7, border: `1px solid ${S.border}`, background: "#fff",
     color: S.text, fontSize: 11, fontWeight: 600, cursor: "pointer",
   };
+  const okStyle = (key: string, base: React.CSSProperties): React.CSSProperties =>
+    done === key ? { ...base, background: "#DCFCE7", color: S.green, borderColor: S.green } : base;
+  const label = (key: string, text: string) => (done === key ? "Copied ✓" : text);
 
   const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
   const trigger: React.CSSProperties =
@@ -188,26 +210,40 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
           background: open ? "#37299B" : "#5B4BC4", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }
       : variant === "icon"
       ? { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 14, padding: 0, borderRadius: 3,
-          border: "1px solid #D9D4F0", background: open ? "#EDEAFB" : "#fff", color: "#5B4BC4", cursor: "pointer", verticalAlign: "middle" }
+          border: "1px solid #D9D4F0", background: "#fff", color: "#5B4BC4", cursor: "pointer", verticalAlign: "middle" }
       : { background: "transparent", border: 0, padding: 0, fontSize: 11, color: S.textMuted, cursor: "pointer", textDecoration: open ? "underline" : "none" };
 
+  if (variant === "icon") {
+    return (
+      <span onClick={stop} onMouseDown={stop} style={{ position: "relative", display: "inline-block", marginLeft: 3, verticalAlign: "middle" }}>
+        <button
+          type="button"
+          data-testid="share-claim"
+          onClick={(e) => { stop(e); onActivate?.(); requestShareOpen(postId); }}
+          title="Share a snapshot of this claim — opens the claim with its Share menu"
+          aria-label="Share this claim"
+          style={trigger}
+        ><ShareIcon size={11} /></button>
+      </span>
+    );
+  }
+
   return (
-    <span ref={boxRef} onClick={stop} onMouseDown={stop} style={{ position: "relative", display: "inline-block", marginLeft: variant === "icon" ? 3 : 0, verticalAlign: variant === "icon" ? "middle" : undefined }}>
+    <span ref={boxRef} onClick={stop} onMouseDown={stop} style={{ position: "relative", display: "inline-block" }}>
       <button
         type="button"
         data-testid="share-claim"
         onClick={(e) => { stop(e); setOpen((o) => !o); }}
         title="Share a snapshot of this claim (link, text or image)"
-        aria-label={variant === "icon" ? "Share this claim" : undefined}
         style={trigger}
-      >{variant === "icon" ? <ShareIcon size={11} /> : <><ShareIcon /> Share</>}</button>
+      ><ShareIcon /> Share</button>
       {open && (
         <div
           role="dialog"
           aria-label="Share this claim"
           data-testid="share-menu"
           style={{
-            position: "absolute", left: 0, top: variant === "icon" ? 18 : 32, zIndex: 20, width: 320, background: "#fff",
+            position: "absolute", left: 0, top: 32, zIndex: 20, width: 320, background: "#fff",
             border: `1px solid ${S.border}`, borderRadius: 10, boxShadow: "0 10px 30px -12px rgba(28,21,51,.35)", padding: 12,
             display: "flex", flexDirection: "column", gap: 10, fontSize: 11, color: S.text,
           }}
@@ -222,19 +258,18 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
                 style={{ width: "100%", height: "auto", borderRadius: 8, border: `1px solid ${S.borderLight}` }}
               />
               <div style={{ color: S.textMuted }}>{snap.band} · {snap.stake_line}</div>
-              {/* patch_fe_copy_snapshot — primary: everything in one write (and the native sheet where there is one) */}
+              {/* patch_fe_copy_snapshot — primary: text + HTML in one write (and the native sheet where there is one) */}
               <div style={{ display: "grid", gridTemplateColumns: canNativeShare() ? "1fr 1fr" : "1fr", gap: 6 }}>
-                <button type="button" style={{ ...btn, height: 34, fontSize: 12, background: "#5B4BC4", color: "#fff", borderColor: "#5B4BC4" }}
+                <button type="button" style={okStyle("snapshot", { ...btn, height: 34, fontSize: 12, background: "#5B4BC4", color: "#fff", borderColor: "#5B4BC4" })}
                   data-testid="share-copy-snapshot"
-                  title="Copies the card image, the text and the link together — paste once into a reply, a post or a chat"
+                  title="Copies the text with its link, plus the card for editors that take rich content — paste once into a reply, a post or a chat"
                   onClick={async () => {
                     const r = await copySnapshot(snap);
-                    flash(r === "full" ? "Snapshot copied — paste it into your reply"
-                      : r === "text+html" ? "Snapshot copied (text and link; the image did not load)"
-                      : r === "text" ? "Text copied — this browser cannot copy the image; the link unfurls into the card"
-                      : "Could not copy — select the link below");
+                    if (r === "failed") flash("Could not copy — select the link below");
+                    else flash(r === "full" ? "Snapshot copied — paste it into your reply; in chats the link unfurls into the card"
+                      : "Text copied — paste it into your reply; the link unfurls into the card", "snapshot");
                   }}
-                >Copy snapshot</button>
+                >{label("snapshot", "Copy snapshot")}</button>
                 {canNativeShare() && (
                   <button type="button" style={{ ...btn, height: 34, fontSize: 12 }} data-testid="share-native"
                     onClick={async () => {
@@ -244,20 +279,22 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
                   >Share…</button>
                 )}
               </div>
+              {note && <div data-testid="share-note" style={{ color: done ? S.green : S.red, fontWeight: 600 }}>{note}</div>}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                <button type="button" style={btn}
+                <button type="button" style={okStyle("link", btn)}
                   data-testid="share-copy-link"
-                  onClick={async () => flash((await copyText(snap.share_url)) ? "Link copied" : "Could not copy — select the link below")}
-                >Copy link</button>
-                <button type="button" style={btn} data-testid="share-copy-text"
-                  onClick={async () => flash((await copyText(snap.share_text)) ? "Text copied" : "Could not copy")}
-                >Copy text</button>
-                <button type="button" style={btn} data-testid="share-copy-image"
+                  onClick={async () => { if (await copyText(snap.share_url)) flash("Link copied", "link"); else flash("Could not copy — select the link below"); }}
+                >{label("link", "Copy link")}</button>
+                <button type="button" style={okStyle("text", btn)} data-testid="share-copy-text"
+                  onClick={async () => { if (await copyText(snap.share_text)) flash("Text copied", "text"); else flash("Could not copy"); }}
+                >{label("text", "Copy text")}</button>
+                <button type="button" style={okStyle("image", btn)} data-testid="share-copy-image"
                   onClick={async () => {
                     const r = await copyImage(snap.card_url);
-                    flash(r === "copied" ? "Image copied" : r === "opened" ? "Image opened in a new tab" : "Could not copy the image");
+                    if (r === "copied") flash("Image copied", "image");
+                    else flash(r === "opened" ? "Image opened in a new tab" : "Could not copy the image");
                   }}
-                >Copy image</button>
+                >{label("image", "Copy image")}</button>
                 <a href={snap.share_url} target="_blank" rel="noopener" style={{ ...btn, display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>Open share page</a>
               </div>
               <input
@@ -267,10 +304,10 @@ export default function ShareClaim({ postId, variant = "button" }: { postId: num
                 onFocus={(e) => e.currentTarget.select()}
                 style={{ width: "100%", boxSizing: "border-box", fontSize: 11, padding: "6px 8px", border: `1px solid ${S.borderLight}`, borderRadius: 6, color: S.textMuted, fontFamily: "ui-monospace, Menlo, monospace" }}
               />
-              <div style={{ color: S.textFaint, fontSize: 10 }}>Rich editors paste the card with its caption; plain boxes paste the text, and its link unfurls into the card on X, Discord, WhatsApp, Slack and most sites. Snapshot {snap.snapshot_at.replace("T", " ").replace("Z", " UTC")}.</div>
+              <div style={{ color: S.textFaint, fontSize: 10 }}>Chats (WhatsApp, Discord, Slack, X) take the text and unfurl its link into the card; rich editors (Gmail, Docs) paste the card with its caption. Snapshot {snap.snapshot_at.replace("T", " ").replace("Z", " UTC")}.</div>
             </>
           )}
-          {note && <div data-testid="share-note" style={{ color: S.green, fontWeight: 600 }}>{note}</div>}
+          {!snap && note && <div data-testid="share-note" style={{ color: S.red, fontWeight: 600 }}>{note}</div>}
         </div>
       )}
     </span>

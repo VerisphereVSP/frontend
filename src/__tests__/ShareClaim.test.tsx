@@ -58,22 +58,23 @@ describe("ShareClaim", () => {
     expect(written[1]).toBe(SNAP.share_text);
   });
 
-  it("Copy snapshot writes text, HTML (card linked) and PNG in one clipboard item", async () => {  // patch_fe_copy_snapshot
+  it("Copy snapshot writes text and HTML (card linked) in one clipboard item and confirms on the button", async () => {  // patch_fe_copy_snapshot / patch_fe_share_fixes
     render(<ShareClaim postId={142} />);
     await act(async () => { screen.getByTestId("share-claim").click(); });
     await waitFor(() => screen.getByTestId("share-copy-snapshot"));
     await act(async () => { screen.getByTestId("share-copy-snapshot").click(); });
-    await waitFor(() => expect(screen.getByTestId("share-note").textContent).toBe("Snapshot copied — paste it into your reply"));
+    await waitFor(() => expect(screen.getByTestId("share-note").textContent).toMatch(/^Snapshot copied/));
+    expect(screen.getByTestId("share-copy-snapshot").textContent).toBe("Copied ✓");  // feedback on the button itself
     expect(items.length).toBe(1);
     const parts = items[0].parts;
-    expect(Object.keys(parts).sort()).toEqual(["image/png", "text/html", "text/plain"]);
+    expect(Object.keys(parts).sort()).toEqual(["text/html", "text/plain"]);  // no PNG: chats would attach it instead of unfurling the link
     expect(await readBlob(parts["text/plain"])).toBe(SNAP.share_text);
     const html = await readBlob(parts["text/html"]);
     expect(html).toContain(`<img src="${SNAP.card_url}"`);
     expect(html).toContain(`<a href="${SNAP.share_url}">`);
     expect(html).toContain("Think it's wrong? “Regular coffee");  // the text form, readable
-    expect(await parts["image/png"]).toBe(PNG);  // a promise, so Safari keeps the user activation while it downloads
     expect(written).toEqual([]);  // no plain-text fallback was needed
+    expect(fetchMock.mock.calls.some((c: any[]) => String(c[0]).endsWith("/card.png"))).toBe(false);  // nothing downloaded
   });
 
   it("Copy snapshot falls back to plain text where ClipboardItem is missing", async () => {  // patch_fe_copy_snapshot
@@ -94,14 +95,40 @@ describe("ShareClaim", () => {
     expect(html).toContain('<a href="https://app.verisphere.co/c/142">https://app.verisphere.co/c/142</a>');
   });
 
-  it("the icon variant is labelled and does not propagate clicks to the sentence/row behind it", async () => {
-    const outer = vi.fn();
-    render(<div onClick={outer}><ShareClaim postId={142} variant="icon" /></div>);
+  it("the icon variant opens no menu of its own: it activates the claim and the claim's Share button opens", async () => {  // patch_fe_share_fixes
+    const outer = vi.fn(); const activate = vi.fn();
+    render(<div onClick={outer}><ShareClaim postId={142} variant="icon" onActivate={activate} /></div>);
     const btn = screen.getByTestId("share-claim");
     expect(btn.getAttribute("aria-label")).toBe("Share this claim");
     await act(async () => { btn.click(); });
     expect(outer).not.toHaveBeenCalled();
+    expect(activate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("share-menu")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    // the claim's Share button mounts afterwards (the page opened the claim) and finds the pending request
+    render(<ShareClaim postId={142} variant="button" />);
     await waitFor(() => screen.getByTestId("share-menu"));
+    await waitFor(() => expect(screen.getByAltText(/Verisphere Snapshot of claim #142/)).toBeTruthy());
+  });
+
+  it("an already-mounted Share button opens on the icon's request; other claims' buttons do not", async () => {  // patch_fe_share_fixes
+    render(<><ShareClaim postId={142} variant="button" /><ShareClaim postId={7} variant="button" /><ShareClaim postId={142} variant="icon" /></>);
+    const [b142, b7, icon] = screen.getAllByTestId("share-claim");
+    expect(screen.queryByTestId("share-menu")).toBeNull();
+    await act(async () => { icon.click(); });
+    await waitFor(() => screen.getByTestId("share-menu"));
+    expect(screen.getAllByTestId("share-menu").length).toBe(1);
+    expect(b142.parentElement!.querySelector('[data-testid="share-menu"]')).toBeTruthy();
+    expect(b7.parentElement!.querySelector('[data-testid="share-menu"]')).toBeNull();
+  });
+
+  it("Copy link confirms on its button", async () => {  // patch_fe_share_fixes
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-copy-link"));
+    await act(async () => { screen.getByTestId("share-copy-link").click(); });
+    await waitFor(() => expect(screen.getByTestId("share-copy-link").textContent).toBe("Copied ✓"));
+    expect(screen.getByTestId("share-note").textContent).toBe("Link copied");
   });
 
   it("the claims view honours the /claims?post=<id> deep link", () => {
@@ -111,6 +138,6 @@ describe("ShareClaim", () => {
     const shared = readFileSync(resolve(process.cwd(), "src/components/claims-shared.tsx"), "utf8");
     expect(shared).toContain('<ShareClaim postId={c.post_id} variant="button" />');
     const article = readFileSync(resolve(process.cwd(), "src/components/article/ArticleView.tsx"), "utf8");
-    expect((article.match(/<ShareClaim postId=\{s\.post_id\} variant="icon" \/>/g) || []).length).toBe(2);  // both Explore lanes
+    expect((article.match(/<ShareClaim postId=\{s\.post_id\} variant="icon" onActivate=\{\(\) => \{ if \(selId !== s\.sentence_id\) \{ setSelId\(s\.sentence_id\);/g) || []).length).toBe(2);  // both Explore lanes select the sentence (patch_fe_share_fixes)
   });
 });
