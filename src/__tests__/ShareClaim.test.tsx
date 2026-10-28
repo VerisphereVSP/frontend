@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, cleanup, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import ShareClaim from "../components/ShareClaim";
+import ShareClaim, { snapshotHtml } from "../components/ShareClaim";
 
 const SNAP = {
   post_id: 142, text: "Regular coffee consumption is associated with a lower risk of stroke.",
@@ -11,20 +11,26 @@ const SNAP = {
   stake_line: "72 % of stake backs this claim", total_stake: 5840, snapshot_at: "2026-10-26T20:48:00Z",
   share_url: "https://app.verisphere.co/c/142", card_url: "https://app.verisphere.co/api/claims/142/card.png",
   app_url: "https://app.verisphere.co/claims?post=142",
-  share_text: "“Regular coffee consumption is associated with a lower risk of stroke.” — Verisphere: Mostly supported, VS +44 (72 % of stake backs it). Details and evidence: https://app.verisphere.co/c/142",
+  invite_question: "Think it's wrong?", invite_call: "Challenge it", invite_line: "Think it's wrong? Challenge it at app.verisphere.co/c/142",
+  share_text: "Think it's wrong? “Regular coffee consumption is associated with a lower risk of stroke.” — 72 % of stake on Verisphere backs it (Mostly supported, VS +44). Challenge it: https://app.verisphere.co/c/142",
 };
+const PNG = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+const readBlob = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(b); });  // jsdom Blob has no .text()
 
 describe("ShareClaim", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   let written: string[];
+  let items: any[];
   beforeEach(() => {
-    written = [];
+    written = []; items = [];
     fetchMock = vi.fn(async (url: string) => {
       if (String(url).endsWith("/claims/142/snapshot")) return { ok: true, json: async () => SNAP } as any;
+      if (String(url).endsWith("/claims/142/card.png")) return { ok: true, blob: async () => PNG } as any;
       return { ok: false, status: 404, json: async () => ({}) } as any;
     });
     vi.stubGlobal("fetch", fetchMock);
-    Object.assign(navigator, { clipboard: { writeText: async (t: string) => { written.push(t); } } });
+    Object.assign(navigator, { clipboard: { writeText: async (t: string) => { written.push(t); }, write: async (its: any[]) => { items.push(...its); } } });
+    vi.stubGlobal("ClipboardItem", class { parts: Record<string, any>; constructor(parts: Record<string, any>) { this.parts = parts; } });  // patch_fe_copy_snapshot
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -50,6 +56,42 @@ describe("ShareClaim", () => {
     expect(screen.getByTestId("share-note").textContent).toBe("Link copied");
     await act(async () => { screen.getByTestId("share-copy-text").click(); });
     expect(written[1]).toBe(SNAP.share_text);
+  });
+
+  it("Copy snapshot writes text, HTML (card linked) and PNG in one clipboard item", async () => {  // patch_fe_copy_snapshot
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-copy-snapshot"));
+    await act(async () => { screen.getByTestId("share-copy-snapshot").click(); });
+    await waitFor(() => expect(screen.getByTestId("share-note").textContent).toBe("Snapshot copied — paste it into your reply"));
+    expect(items.length).toBe(1);
+    const parts = items[0].parts;
+    expect(Object.keys(parts).sort()).toEqual(["image/png", "text/html", "text/plain"]);
+    expect(await readBlob(parts["text/plain"])).toBe(SNAP.share_text);
+    const html = await readBlob(parts["text/html"]);
+    expect(html).toContain(`<img src="${SNAP.card_url}"`);
+    expect(html).toContain(`<a href="${SNAP.share_url}">`);
+    expect(html).toContain("Think it's wrong? “Regular coffee");  // the text form, readable
+    expect(await parts["image/png"]).toBe(PNG);  // a promise, so Safari keeps the user activation while it downloads
+    expect(written).toEqual([]);  // no plain-text fallback was needed
+  });
+
+  it("Copy snapshot falls back to plain text where ClipboardItem is missing", async () => {  // patch_fe_copy_snapshot
+    vi.stubGlobal("ClipboardItem", undefined);
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-copy-snapshot"));
+    await act(async () => { screen.getByTestId("share-copy-snapshot").click(); });
+    await waitFor(() => expect(screen.getByTestId("share-note").textContent).toMatch(/^Text copied/));
+    expect(written).toEqual([SNAP.share_text]);
+    expect(screen.queryByTestId("share-native")).toBeNull();  // jsdom has no navigator.share
+  });
+
+  it("snapshotHtml escapes the claim and links the url", () => {  // patch_fe_copy_snapshot
+    const html = snapshotHtml({ ...SNAP, share_text: 'Says <b>"hi"</b> & bye: https://app.verisphere.co/c/142' } as any);
+    expect(html).not.toContain("<b>");
+    expect(html).toContain("&lt;b&gt;&quot;hi&quot;&lt;/b&gt; &amp; bye");
+    expect(html).toContain('<a href="https://app.verisphere.co/c/142">https://app.verisphere.co/c/142</a>');
   });
 
   it("the icon variant is labelled and does not propagate clicks to the sentence/row behind it", async () => {
