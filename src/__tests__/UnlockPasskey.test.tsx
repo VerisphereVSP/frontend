@@ -66,6 +66,15 @@ describe("UnlockPasskey", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
+  it("is mounted in BOTH header widgets (the pool widget is the live one on dev/prod)", async () => {  // patch_fe_passkey_3b
+    const { readFileSync } = await import("node:fs"); const { resolve } = await import("node:path");
+    for (const f of ["src/components/PoolMarketWidget.tsx", "src/components/VSPMarketWidget.tsx"]) {
+      const src = readFileSync(resolve(process.cwd(), f), "utf8");
+      expect(src, f).toContain("<UnlockPasskey />");
+      expect(src.indexOf("<UnlockPasskey />"), f).toBeGreaterThan(src.indexOf("<ConnectButton"));
+    }
+  });
+
   it("Lock now forgets the key for this session", async () => {  // patch_fe_passkey_3b
     await act(async () => { setAccount({ address: wagmiState.address } as any); });
     render(<UnlockPasskey />);
