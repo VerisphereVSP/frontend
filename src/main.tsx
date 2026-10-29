@@ -14,6 +14,7 @@ import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { avalancheFuji, avalanche } from "wagmi/chains";
+import { walletListWithPasskey } from "./wallet/passkey/wallet";  // patch_fe_passkey_wallet
 
 const chainEnv = import.meta.env.VITE_CHAIN_ENV;
 const projectId =
@@ -29,6 +30,7 @@ const config = getDefaultConfig({
   appName: "Verisphere",
   projectId,
   chains,
+  wallets: walletListWithPasskey(chains[0]),  // patch_fe_passkey_wallet: Passkey first, then the usual wallets
   ssr: false,
 });
 
