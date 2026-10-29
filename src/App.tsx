@@ -556,11 +556,11 @@ export default function App() {
   const showingArticle = view === "explore" && topic;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div className="app-shell">{/* patch_fe_mobile_shell: 100dvh + no horizontal overflow (styles.css) */}
       {/* Top bar */}
       <header className="top-bar" style={{ flexShrink: 0 }}>
         <div className="top-bar-container">
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div className="brand-nav">{/* patch_fe_mobile_shell: wraps on phones instead of widening the viewport */}
             <h2
               className="logo"
               onClick={() => {
@@ -572,7 +572,7 @@ export default function App() {
             >
               Verisphere
             </h2>
-            <nav style={{ display: "flex", gap: 2 }}>
+            <nav className="top-nav">
               {navBtn("Explore", "explore")}
               {navBtn("Claims", "claims")}
               {navBtn("Positions", "portfolio", true)}  {/* patch_bundle09_p1a_nav_portfolio_age_time */}
