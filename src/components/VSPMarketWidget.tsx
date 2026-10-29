@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import UnlockPasskey from "../wallet/passkey/UnlockPasskey";  // patch_fe_passkey_wallet
 import TradeModal from "./TradeModal";
 import { useContracts } from "../contracts";
 
@@ -168,6 +169,7 @@ export default function VSPMarketWidget() {
     <div className="vsp-widget-compact">
       {/* Wallet connect */}
       <ConnectButton />
+      <UnlockPasskey />{/* patch_fe_passkey_wallet: Unlock / passkey badge, only for the passkey connector */}
 
       {/* Balances (compact) */}
       {isConnected && (
