@@ -8,6 +8,7 @@ import { useContracts } from "../contracts";
 import { probePool, PoolState } from "../api/pool";
 import PoolTradeModal from "./PoolTradeModal";
 import AddVspToWallet from "./AddVspToWallet";  // patch_fe_add_vsp_wallet
+import UnlockPasskey from "../wallet/passkey/UnlockPasskey";  // patch_fe_passkey_3b: the pool widget is the live header
 
 const REFRESH_MS = 30_000;
 
@@ -65,6 +66,7 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
             (price-styled) · Buy/Sell · price ($n.nnnn/VSP, pool-link-sized)
             · pool. r4 note stands: the pill is the app's only connect control. */}
         <ConnectButton showBalance={false} />
+        <UnlockPasskey />{/* patch_fe_passkey_3b: Unlock / "passkey ▾" panel — only for the passkey connector (was mounted in the legacy MM widget only) */}
         {isConnected && (
           <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
             {fmtBal(vspBal?.formatted)} VSP
