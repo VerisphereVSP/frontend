@@ -8,8 +8,9 @@ import { getAddress, type Chain, type Hex } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
 import {
   accountFromPrf, browserAuthenticator, clearStored, isMarkedDisconnected, loadStored, markDisconnected, PasskeyError,
-  saveStored, type PasskeyAuthenticator,
+  privateKeyFromPrf, saveStored, type PasskeyAuthenticator,
 } from "./keys";
+import { privateKeyToAccount } from "viem/accounts";
 import { createPasskeyProvider, type PasskeyProvider } from "./provider";
 import { transportFor } from "./rpc";
 import { getAccount, lock, setAccount, setConnected, setKnownAddress } from "./state";
@@ -36,7 +37,22 @@ export async function unlockPasskey(auth: PasskeyAuthenticator = browserAuthenti
   return account;
 }
 
-/** Create a brand-new passkey wallet. Exported for tests and the (3b) "new wallet" setting. */
+/** patch_fe_passkey_3b — the recovery key ("Move to MetaMask"): a FRESH assertion (biometric prompt) every time, never
+ *  the in-memory key, so the export is a deliberate act; the hex is returned to the caller for one display and is not
+ *  kept here. Refuses if the passkey derives a different address than the stored one. */
+export async function exportPrivateKey(auth: PasskeyAuthenticator = browserAuthenticator): Promise<{ privateKey: Hex; address: Hex }> {
+  const stored = loadStored();
+  if (!stored) throw new PasskeyError("No passkey wallet in this browser.", "locked");
+  const prf = await auth.assert(stored.credentialId);
+  const privateKey = await privateKeyFromPrf(prf);
+  const address = privateKeyToAccount(privateKey).address;
+  if (getAddress(address) !== getAddress(stored.address)) {
+    throw new PasskeyError("This passkey derives a different address than the one saved here.", "mismatch");
+  }
+  return { privateKey, address };
+}
+
+/** Create a brand-new passkey wallet. Exported for tests and the "start over" flow. */
 export async function createPasskeyWallet(auth: PasskeyAuthenticator = browserAuthenticator): Promise<PrivateKeyAccount> {
   const created = await auth.create();
   const prf = created.prf ?? (await auth.assert(created.credentialId));
