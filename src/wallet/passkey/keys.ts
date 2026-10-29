@@ -68,18 +68,25 @@ export async function deriveKeyBytes(prf: Uint8Array, attempt = 0): Promise<Uint
   return new Uint8Array(bits);
 }
 
-/** The viem local account for a PRF output. Deterministic: same PRF bytes → same account. */
-export async function accountFromPrf(prf: Uint8Array): Promise<PrivateKeyAccount> {
+/** The private key for a PRF output, as hex. Deterministic: same PRF bytes → same key. Only two callers: the
+ *  account for signing (held in memory) and the recovery export (shown once, after a fresh biometric prompt). */
+export async function privateKeyFromPrf(prf: Uint8Array): Promise<Hex> {
   if (!(prf instanceof Uint8Array) || prf.length < 32) throw new PasskeyError("The passkey returned no usable PRF output.", "no-prf");
   for (let attempt = 0; attempt < 8; attempt++) {
-    const bytes = await deriveKeyBytes(prf, attempt);
+    const hex = bytesToHex(await deriveKeyBytes(prf, attempt));
     try {
-      return privateKeyToAccount(bytesToHex(bytes));
+      privateKeyToAccount(hex);
+      return hex;
     } catch {
       /* not a valid scalar (astronomically unlikely) — derive again with a different info string */
     }
   }
   throw new PasskeyError("Could not derive a key from this passkey.", "no-prf");
+}
+
+/** The viem local account for a PRF output. */
+export async function accountFromPrf(prf: Uint8Array): Promise<PrivateKeyAccount> {
+  return privateKeyToAccount(await privateKeyFromPrf(prf));
 }
 
 // ── storage (public data only) ──────────────────────────────────────────────────────────────────────

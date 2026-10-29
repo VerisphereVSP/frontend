@@ -8,7 +8,8 @@ import {
   accountFromPrf, deriveKeyBytes, toBase64Url, fromBase64Url, loadStored, saveStored, clearStored, markDisconnected,
   isMarkedDisconnected, PasskeyError, type PasskeyAuthenticator,
 } from "../wallet/passkey/keys";
-import { createPasskeyWallet, unlockPasskey, forgetPasskeyWallet } from "../wallet/passkey/connector";
+import { createPasskeyWallet, unlockPasskey, forgetPasskeyWallet, exportPrivateKey } from "../wallet/passkey/connector";
+import { privateKeyToAccount } from "viem/accounts";
 import { createPasskeyProvider, ProviderRpcError } from "../wallet/passkey/provider";
 import { getAccount, getState, lock } from "../wallet/passkey/state";
 import { rpcUrlsFor } from "../wallet/passkey/rpc";
@@ -109,6 +110,18 @@ describe("connector flows", () => {
     lock();
     await expect(unlockPasskey(fakeAuth(PRF_B))).rejects.toMatchObject({ code: "mismatch" });
     expect(getAccount()).toBeNull();
+  });
+
+  it("the recovery export re-derives from a fresh assertion and matches the stored address", async () => {  // patch_fe_passkey_3b
+    const auth = fakeAuth(PRF_A);
+    const acct = await createPasskeyWallet(auth);
+    lock();
+    const { privateKey, address } = await exportPrivateKey(auth);
+    expect(auth.asserts).toBe(1);                         // a fresh prompt, not the in-memory key
+    expect(address).toBe(acct.address);
+    expect(privateKeyToAccount(privateKey).address).toBe(acct.address);  // what MetaMask's Import account would get
+    expect(getAccount()).toBeNull();                      // export does not unlock the session
+    await expect(exportPrivateKey(fakeAuth(PRF_B))).rejects.toMatchObject({ code: "mismatch" });
   });
 
   it("unlock without a stored wallet is a 'locked' error", async () => {
