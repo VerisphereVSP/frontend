@@ -3,6 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, cleanup, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+// patch_fe_invites: ShareClaim now reads the wallet connection (for "Include an invitation"); default = not connected
+const wagmiState = { isConnected: false, address: undefined as string | undefined };
+vi.mock("wagmi", () => ({ useAccount: () => wagmiState, useWalletClient: () => ({ data: undefined }), usePublicClient: () => undefined, useChainId: () => 43113 }));
+vi.mock("../contracts", () => ({ useContracts: () => ({ data: undefined }) }));
+vi.mock("../components/Invitations", () => ({
+  InviteForm: ({ onIssued }: any) => <button data-testid="fake-invite-form" onClick={() => onIssued({ code: "VSP-AAAA-BBBB-CCCC", code_hash: "h", amount_vsp: "2", expires_at: "2026-12-01T00:00:00Z", escrow_tx: "0x1", sponsor: "0xs" })}>fake form</button>,
+}));
+
 import ShareClaim, { snapshotHtml } from "../components/ShareClaim";
 
 const SNAP = {
@@ -86,6 +94,27 @@ describe("ShareClaim", () => {
     await waitFor(() => expect(screen.getByTestId("share-note").textContent).toMatch(/^Text copied/));
     expect(written).toEqual([SNAP.share_text]);
     expect(screen.queryByTestId("share-native")).toBeNull();  // jsdom has no navigator.share
+  });
+
+  it("Include an invitation: the link and text carry the code once issued; hidden when not connected", async () => {  // patch_fe_invites
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-copy-link"));
+    expect(screen.queryByTestId("share-invite")).toBeNull();  // not connected: nothing to escrow from
+    cleanup();
+    wagmiState.isConnected = true; wagmiState.address = "0x1111111111111111111111111111111111111111";
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-invite-open"));
+    await act(async () => { screen.getByTestId("share-invite-open").click(); });
+    await act(async () => { screen.getByTestId("fake-invite-form").click(); });
+    expect(screen.getByTestId("share-invite-attached").textContent).toContain("2 VSP attached");
+    const link = (screen.getByLabelText("Share link") as HTMLInputElement).value;
+    expect(link).toBe("https://app.verisphere.co/c/142?code=VSP-AAAA-BBBB-CCCC");
+    await act(async () => { screen.getByTestId("share-copy-text").click(); });
+    expect(written[0]).toContain("https://app.verisphere.co/c/142?code=VSP-AAAA-BBBB-CCCC");
+    expect(written[0]).toContain("I've put 2 VSP on the table for you");
+    wagmiState.isConnected = false; wagmiState.address = undefined;
   });
 
   it("snapshotHtml escapes the claim and links the url", () => {  // patch_fe_copy_snapshot

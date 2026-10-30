@@ -5,7 +5,10 @@
 // "Share…" opens the native share sheet (image + text together) where the browser has one (phones). The single-format
 // buttons remain below for when a target wants exactly one form.
 import { useEffect, useRef, useState } from "react";
+import { useAccount } from "wagmi";
 import { S } from "./claims-shared";
+import { InviteForm } from "./Invitations";  // patch_fe_invites
+import { withInvite, type InviteIssued } from "../wallet/invites";  // patch_fe_invites
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -159,6 +162,10 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
   const [note, setNote] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);  // which button just succeeded (shows "Copied ✓")
   const boxRef = useRef<HTMLDivElement>(null);
+  // patch_fe_invites — an invitation attached to this share: the link carries ?code=, the text says what is on the table
+  const { isConnected } = useAccount();
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invite, setInvite] = useState<InviteIssued | null>(null);
 
   // the claim's Share button opens when the small icon elsewhere asked for it (now, or just before this mounted)
   useEffect(() => {
@@ -250,7 +257,10 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
         >
           {error && <div style={{ color: S.red }}>{error}</div>}
           {!snap && !error && <div style={{ color: S.textFaint }}>Preparing the snapshot…</div>}
-          {snap && (
+          {snap && (() => {
+            const eff = invite ? withInvite(snap.share_url, snap.share_text, invite.code, invite.amount_vsp) : { url: snap.share_url, text: snap.share_text };
+            const snapEff: Snapshot = { ...snap, share_url: eff.url, share_text: eff.text };
+            return (
             <>
               <img
                 src={snap.card_url}
@@ -264,7 +274,7 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                   data-testid="share-copy-snapshot"
                   title="Copies the text with its link, plus the card for editors that take rich content — paste once into a reply, a post or a chat"
                   onClick={async () => {
-                    const r = await copySnapshot(snap);
+                    const r = await copySnapshot(snapEff);
                     if (r === "failed") flash("Could not copy — select the link below");
                     else flash(r === "full" ? "Snapshot copied — paste it into your reply; in chats the link unfurls into the card"
                       : "Text copied — paste it into your reply; the link unfurls into the card", "snapshot");
@@ -273,7 +283,7 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                 {canNativeShare() && (
                   <button type="button" style={{ ...btn, height: 34, fontSize: 12 }} data-testid="share-native"
                     onClick={async () => {
-                      const r = await shareSnapshot(snap);
+                      const r = await shareSnapshot(snapEff);
                       if (r === "failed") flash("Could not open the share sheet — use Copy snapshot");
                     }}
                   >Share…</button>
@@ -283,10 +293,10 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <button type="button" style={okStyle("link", btn)}
                   data-testid="share-copy-link"
-                  onClick={async () => { if (await copyText(snap.share_url)) flash("Link copied", "link"); else flash("Could not copy — select the link below"); }}
+                  onClick={async () => { if (await copyText(eff.url)) flash("Link copied", "link"); else flash("Could not copy — select the link below"); }}
                 >{label("link", "Copy link")}</button>
                 <button type="button" style={okStyle("text", btn)} data-testid="share-copy-text"
-                  onClick={async () => { if (await copyText(snap.share_text)) flash("Text copied", "text"); else flash("Could not copy"); }}
+                  onClick={async () => { if (await copyText(eff.text)) flash("Text copied", "text"); else flash("Could not copy"); }}
                 >{label("text", "Copy text")}</button>
                 <button type="button" style={okStyle("image", btn)} data-testid="share-copy-image"
                   onClick={async () => {
@@ -295,18 +305,34 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                     else flash(r === "opened" ? "Image opened in a new tab" : "Could not copy the image");
                   }}
                 >{label("image", "Copy image")}</button>
-                <a href={snap.share_url} target="_blank" rel="noopener" style={{ ...btn, display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>Open share page</a>
+                <a href={eff.url} target="_blank" rel="noopener" style={{ ...btn, display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>Open share page</a>
               </div>
+              {/* patch_fe_invites — put VSP on the table for whoever opens this link */}
+              {isConnected && (
+                <div data-testid="share-invite" style={{ borderTop: `1px solid ${S.borderLight}`, paddingTop: 8 }}>
+                  {invite ? (
+                    <div data-testid="share-invite-attached" style={{ background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 8, color: "#37299B" }}>
+                      <b>{invite.amount_vsp} VSP attached</b> · code <code>{invite.code}</code> · the link and text now carry it. Shown once; the VSP returns to you if unused by the expiry.
+                    </div>
+                  ) : inviteOpen ? (
+                    <InviteForm compact onIssued={(inv) => { setInvite(inv); setInviteOpen(false); }} />
+                  ) : (
+                    <button type="button" data-testid="share-invite-open" style={{ ...btn, width: "100%", borderColor: "#D9D4F0", color: "#5B4BC4" }} onClick={() => setInviteOpen(true)}
+                      title="Escrow some of your VSP behind this link so the reader can take a side without buying first">Include an invitation (put VSP on the table)</button>
+                  )}
+                </div>
+              )}
               <input
                 readOnly
                 aria-label="Share link"
-                value={snap.share_url}
+                value={eff.url}
                 onFocus={(e) => e.currentTarget.select()}
                 style={{ width: "100%", boxSizing: "border-box", fontSize: 11, padding: "6px 8px", border: `1px solid ${S.borderLight}`, borderRadius: 6, color: S.textMuted, fontFamily: "ui-monospace, Menlo, monospace" }}
               />
               <div style={{ color: S.textFaint, fontSize: 10 }}>Chats (WhatsApp, Discord, Slack, X) take the text and unfurl its link into the card; rich editors (Gmail, Docs) paste the card with its caption. Snapshot {snap.snapshot_at.replace("T", " ").replace("Z", " UTC")}.</div>
             </>
-          )}
+            );
+          })()}
           {!snap && note && <div data-testid="share-note" style={{ color: S.red, fontWeight: 600 }}>{note}</div>}
         </div>
       )}
