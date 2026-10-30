@@ -93,7 +93,7 @@ export function InvitesList() {
     <section data-testid="invites-list" style={{ marginTop: 12, border: `1px solid ${S.border}`, borderRadius: 10, padding: "8px 12px", background: "#fff", fontSize: 11 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ fontWeight: 700, fontSize: 13 }}>Invitations</span>
-        <span style={{ color: S.textMuted }}>VSP you set aside for newcomers · {open} open of {max}</span>
+        <span style={{ color: S.textMuted }}>VSP you set aside for invitations · {open} open of {max}</span>
         <span style={{ flex: 1 }} />
         <button type="button" data-testid="invite-new" style={showForm ? btn : primary} onClick={() => { setShowForm((v) => !v); setIssued(null); }}>{showForm ? "Close" : "New invitation"}</button>
       </div>
