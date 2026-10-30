@@ -41,7 +41,7 @@ export function snapshotHtml(snap: Snapshot): string {
   const text = escapeHtml(snap.share_text).replace(
     escapeHtml(snap.share_url),
     `<a href="${escapeHtml(snap.share_url)}">${escapeHtml(snap.share_url)}</a>`,
-  );
+  ).replace(/\n/g, "<br>");
   return `<div><a href="${escapeHtml(snap.share_url)}"><img src="${escapeHtml(snap.card_url)}" width="600" alt="${alt}"></a><p>${text}</p></div>`;
 }
 
@@ -323,7 +323,15 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                       <div style={{ marginTop: 4, color: "#5D5776" }}>The link and text now carry it. Shown once; the VSP returns to you if unused by the expiry. Your open invitations are listed under Positions.</div>
                     </div>
                   ) : inviteOpen ? (
-                    <InviteForm compact postId={postId} onIssued={(inv) => { issuedByPost.set(postId, inv); reopenAfterRemount.set(postId, Date.now()); setInvite(inv); setInviteOpen(false); }} />
+                    <InviteForm compact postId={postId} onIssued={async (inv) => {
+                      issuedByPost.set(postId, inv); reopenAfterRemount.set(postId, Date.now()); setInvite(inv); setInviteOpen(false);
+                      // copy the snapshot with the invitation at once; the browser may refuse if the wallet round-trip outlived
+                      // the click's activation — then the button simply waits for one click
+                      const e2 = withInvite(snap.share_url, snap.share_text, inv.code, inv.amount_vsp);
+                      const r = await copySnapshot({ ...snap, share_url: e2.url, share_text: e2.text });
+                      if (r === "failed") flash("Invitation attached — click Copy snapshot to copy it");
+                      else flash("Invitation attached and snapshot copied — paste it to your friend", "snapshot");
+                    }} />
                   ) : (
                     <button type="button" data-testid="share-invite-open" style={{ ...btn, width: "100%", borderColor: "#D9D4F0", color: "#5B4BC4" }} onClick={() => setInviteOpen(true)}
                       title="Escrow some of your VSP behind this link so the reader can take a side without buying first">Include an invitation (put VSP on the table)</button>

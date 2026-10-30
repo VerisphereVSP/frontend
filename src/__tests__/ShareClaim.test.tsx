@@ -19,8 +19,8 @@ const SNAP = {
   stake_line: "72 % of stake backs this claim", total_stake: 5840, snapshot_at: "2026-10-26T20:48:00Z",
   share_url: "https://app.verisphere.co/c/142", card_url: "https://app.verisphere.co/api/claims/142/card.png",
   app_url: "https://app.verisphere.co/claims?post=142",
-  invite_question: "Think it's wrong?", invite_call: "Challenge it", invite_line: "Think it's wrong? Challenge it at app.verisphere.co/c/142",
-  share_text: "Think it's wrong? “Regular coffee consumption is associated with a lower risk of stroke.” — 72 % of stake on Verisphere backs it (Mostly supported, VS +44). Challenge it: https://app.verisphere.co/c/142",
+  invite_question: "Agree? Support it. Disagree? Challenge it.", invite_call: "Take a side", invite_line: "Agree? Support it. Disagree? Challenge it. app.verisphere.co/c/142",
+  share_text: "“Regular coffee consumption is associated with a lower risk of stroke.”\n72 % of stake on Verisphere backs it. Agree? Support it. Disagree? Challenge it.\nhttps://app.verisphere.co/c/142",
 };
 const PNG = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
 const readBlob = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(b); });  // jsdom Blob has no .text()
@@ -80,7 +80,8 @@ describe("ShareClaim", () => {
     const html = await readBlob(parts["text/html"]);
     expect(html).toContain(`<img src="${SNAP.card_url}"`);
     expect(html).toContain(`<a href="${SNAP.share_url}">`);
-    expect(html).toContain("Think it's wrong? “Regular coffee");  // the text form, readable
+    expect(html).toContain("“Regular coffee");  // the text form, readable
+    expect(html).toContain("<br>");  // line breaks survive in the rich form
     expect(written).toEqual([]);  // no plain-text fallback was needed
     expect(fetchMock.mock.calls.some((c: any[]) => String(c[0]).endsWith("/card.png"))).toBe(false);  // nothing downloaded
   });
@@ -109,6 +110,11 @@ describe("ShareClaim", () => {
     await act(async () => { screen.getByTestId("share-invite-open").click(); });
     await act(async () => { screen.getByTestId("fake-invite-form").click(); });
     expect(screen.getByTestId("share-invite-attached").textContent).toContain("2 VSP attached for claim #142");
+    // auto-copied on confirmation: one clipboard item with the invitation text, and the button says so
+    await waitFor(() => expect(screen.getByTestId("share-copy-snapshot").textContent).toBe("Copied ✓"));
+    expect(items.length).toBe(1);
+    expect(await readBlob(items[0].parts["text/plain"])).toContain("I've put 2 VSP on the table for you");
+    expect((await readBlob(items[0].parts["text/plain"])).split("\n").pop()).toBe("https://app.verisphere.co/c/142?code=VSP-AAAA-BBBB-CCCC");
     // patch_fe_invites_2: the issued invitation survives a remount of the row (tx-resolved refresh) and the menu reopens
     cleanup();
     render(<ShareClaim postId={142} />);
