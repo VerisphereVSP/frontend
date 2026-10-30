@@ -7,6 +7,9 @@ import StakeControl from "./StakeControl";
 import { PlusButton } from "./article";
 import ClaimPickerModal from "./article/ClaimPickerModal";
 import { useCreateLink, useStake } from "@verisphere/protocol";
+import ShareClaim from "./ShareClaim";  // patch_fe_invites: share icon in collapsed rows
+import { RedeemInvite } from "./Invitations";  // patch_fe_invites
+import { codeFromLocation } from "../wallet/invites";  // patch_fe_invites
 import {
   S, GRID, LINK_GRID, formatAge,
   AddressTooltip, QueueView, Badge, ExpandedClaimDetail,
@@ -189,8 +192,10 @@ export default function ClaimsExplorer() {
     { key: "topic", label: "Topic" },
   ];
 
+  const inviteCode = codeFromLocation();  // patch_fe_invites: a share link carried an invitation
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column" as const, height: "100%", minHeight: 0 }}>
+      {inviteCode && <RedeemInvite code={inviteCode} />}
       {/* Header */}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
@@ -327,6 +332,7 @@ export default function ClaimsExplorer() {
                           <Jazzicon address={c.creator} size={16} />
                         </AddressTooltip>
                       )}
+                      {!c.is_link && <ShareClaim postId={c.post_id} variant="icon" onActivate={() => setExpandedId(c.post_id)} />}{/* patch_fe_invites: Lavey's ask — share from the list; opens the row and its Share menu */}
                       {c.is_link && <Badge type="link" />}
                       {!c.is_link && c.dupe_member_count && c.dupe_member_count > 1 && (
                         /* badge click reveals + expands this group's row */

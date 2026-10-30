@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import Jazzicon from "./Jazzicon";
 import VSBar from "./VSBar";
+import { InvitesList } from "./Invitations";  // patch_fe_invites
 import {
   S, formatAge,
   AddressTooltip, Badge, ExpandedClaimDetail,
@@ -477,6 +478,7 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
           })}
         </div>
       )}
+      <div style={{ flexShrink: 0, maxHeight: 260, overflowY: "auto" }}><InvitesList />{/* patch_fe_invites: put VSP on the table, see your codes, revoke */}</div>
     </div>
   );
 }
