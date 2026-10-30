@@ -7,12 +7,12 @@ import { parseUnits } from "viem";
 const API = import.meta.env.VITE_API_BASE || "/api";
 
 export interface InviteConfig { escrow_address: Address; min_vsp: string; max_vsp: string; max_days: number; max_outstanding: number; default_days: number }
-export interface InviteIssued { code: string; code_hash: string; amount_vsp: string; expires_at: string; escrow_tx: string; sponsor: string }
-export interface InvitePeek { status: "open" | "redeemed" | "revoked" | "expired"; amount_vsp: string; expires_at: string }
+export interface InviteIssued { code: string; code_hash: string; amount_vsp: string; expires_at: string; escrow_tx: string; sponsor: string; post_id?: number | null }
+export interface InvitePeek { status: "open" | "redeemed" | "revoked" | "expired"; amount_vsp: string; expires_at: string; post_id?: number | null }
 export interface InviteRow {
   id: number; code_hash: string; amount_vsp: string; created_at: string; expires_at: string;
   status: "open" | "redeemed" | "revoked" | "expired"; redeemed_by: string | null; redeemed_at: string | null;
-  escrow_tx: string | null; redeem_tx: string | null; refund_tx: string | null; closed_at: string | null;
+  escrow_tx: string | null; redeem_tx: string | null; refund_tx: string | null; closed_at: string | null; post_id?: number | null;
 }
 
 async function j<T>(r: Response): Promise<T> {
@@ -57,13 +57,13 @@ export async function signEscrowPermit(walletClient: WalletClient, publicClient:
 /** Issue: permit(sponsor → escrow, amount) signed in the wallet, then the app escrows and returns the code. */
 export async function issueInvite(opts: {
   walletClient: WalletClient; publicClient: PublicClient; chainId: number; token: Address;
-  amountVsp: string; expiresDays: number; config?: InviteConfig;
+  amountVsp: string; expiresDays: number; config?: InviteConfig; postId?: number | null;
 }): Promise<InviteIssued> {
   const cfg = opts.config ?? (await fetchInviteConfig());
   const value = parseUnits(opts.amountVsp, 18);
   const permit = await signEscrowPermit(opts.walletClient, opts.publicClient, opts.token, cfg.escrow_address, value, opts.chainId);
   return fetch(`${API}/invites`, { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount_vsp: opts.amountVsp, expires_days: opts.expiresDays, permit }) }).then((r) => j<InviteIssued>(r));
+    body: JSON.stringify({ amount_vsp: opts.amountVsp, expires_days: opts.expiresDays, permit, post_id: opts.postId ?? null }) }).then((r) => j<InviteIssued>(r));
 }
 
 /** Revoke: a personal_sign by the sponsor over a fixed message with a timestamp (the app verifies, 10-minute window). */

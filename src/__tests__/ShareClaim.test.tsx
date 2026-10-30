@@ -108,7 +108,13 @@ describe("ShareClaim", () => {
     await waitFor(() => screen.getByTestId("share-invite-open"));
     await act(async () => { screen.getByTestId("share-invite-open").click(); });
     await act(async () => { screen.getByTestId("fake-invite-form").click(); });
-    expect(screen.getByTestId("share-invite-attached").textContent).toContain("2 VSP attached");
+    expect(screen.getByTestId("share-invite-attached").textContent).toContain("2 VSP attached for claim #142");
+    // patch_fe_invites_2: the issued invitation survives a remount of the row (tx-resolved refresh) and the menu reopens
+    cleanup();
+    render(<ShareClaim postId={142} />);
+    await waitFor(() => screen.getByTestId("share-menu"));
+    await waitFor(() => screen.getByTestId("share-invite-attached"));
+    expect(screen.getByTestId("share-invite-attached").textContent).toContain("VSP-AAAA-BBBB-CCCC");
     const link = (screen.getByLabelText("Share link") as HTMLInputElement).value;
     expect(link).toBe("https://app.verisphere.co/c/142?code=VSP-AAAA-BBBB-CCCC");
     await act(async () => { screen.getByTestId("share-copy-text").click(); });

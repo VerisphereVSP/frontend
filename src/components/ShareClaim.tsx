@@ -75,6 +75,10 @@ export async function copySnapshot(snap: Snapshot): Promise<"full" | "text" | "f
 // open the claim and the claim's own Share button opens. A module-level "pending" covers the mount race: the button
 // may not exist yet when the icon is clicked, so it also checks on mount.
 let pendingOpen: number | null = null;
+// patch_fe_invites_2 — an invitation issued from this menu survives a remount: the escrow transfer lands in
+// Transactions, the app refreshes on tx-resolved, and the row (menu included) may be rebuilt meanwhile.
+const issuedByPost = new Map<number, InviteIssued>();
+const reopenAfterRemount = new Map<number, number>();  // postId → time an invitation was issued; a remount within 60 s reopens the menu
 export function requestShareOpen(postId: number) {
   pendingOpen = postId;
   window.dispatchEvent(new CustomEvent("verisphere:share-open", { detail: { postId } }));
@@ -165,12 +169,14 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
   // patch_fe_invites — an invitation attached to this share: the link carries ?code=, the text says what is on the table
   const { isConnected } = useAccount();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [invite, setInvite] = useState<InviteIssued | null>(null);
+  const [invite, setInvite] = useState<InviteIssued | null>(() => issuedByPost.get(postId) ?? null);
 
   // the claim's Share button opens when the small icon elsewhere asked for it (now, or just before this mounted)
   useEffect(() => {
     if (variant === "icon") return;
     if (pendingOpen === postId) { pendingOpen = null; setOpen(true); }
+    const t = reopenAfterRemount.get(postId);
+    if (t != null) { reopenAfterRemount.delete(postId); if (Date.now() - t < 60_000) setOpen(true); }
     const onAsk = (e: Event) => {
       if ((e as CustomEvent).detail?.postId === postId) { pendingOpen = null; setOpen(true); }
     };
@@ -312,10 +318,12 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                 <div data-testid="share-invite" style={{ borderTop: `1px solid ${S.borderLight}`, paddingTop: 8 }}>
                   {invite ? (
                     <div data-testid="share-invite-attached" style={{ background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 8, color: "#37299B" }}>
-                      <b>{invite.amount_vsp} VSP attached</b> · code <code>{invite.code}</code> · the link and text now carry it. Shown once; the VSP returns to you if unused by the expiry.
+                      <b>{invite.amount_vsp} VSP attached</b> for claim #{postId} · code <code>{invite.code}</code>
+                      <button type="button" style={{ ...btn, height: 22, marginLeft: 6, fontSize: 10 }} onClick={async () => { if (await copyText(invite.code)) flash("Code copied", "code"); }}>{label("code", "Copy code")}</button>
+                      <div style={{ marginTop: 4, color: "#5D5776" }}>The link and text now carry it. Shown once; the VSP returns to you if unused by the expiry. Your open invitations are listed under Positions.</div>
                     </div>
                   ) : inviteOpen ? (
-                    <InviteForm compact onIssued={(inv) => { setInvite(inv); setInviteOpen(false); }} />
+                    <InviteForm compact postId={postId} onIssued={(inv) => { issuedByPost.set(postId, inv); reopenAfterRemount.set(postId, Date.now()); setInvite(inv); setInviteOpen(false); }} />
                   ) : (
                     <button type="button" data-testid="share-invite-open" style={{ ...btn, width: "100%", borderColor: "#D9D4F0", color: "#5B4BC4" }} onClick={() => setInviteOpen(true)}
                       title="Escrow some of your VSP behind this link so the reader can take a side without buying first">Include an invitation (put VSP on the table)</button>

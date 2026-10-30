@@ -22,7 +22,7 @@ const input: React.CSSProperties = { height: 30, padding: "0 8px", borderRadius:
 const toast = (message: string, type: "error" | "info" | "success" = "info") =>
   window.dispatchEvent(new CustomEvent("verisphere:toast", { detail: { message, type } }));
 
-export function InviteForm({ onIssued, compact = false }: { onIssued: (inv: InviteIssued) => void; compact?: boolean }) {
+export function InviteForm({ onIssued, compact = false, postId = null }: { onIssued: (inv: InviteIssued) => void; compact?: boolean; postId?: number | null }) {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -47,7 +47,7 @@ export function InviteForm({ onIssued, compact = false }: { onIssued: (inv: Invi
     if (!walletClient || !publicClient || !contracts?.VSPToken) { setErr("Wallet not ready."); return; }
     setBusy(true);
     try {
-      const inv = await issueInvite({ walletClient, publicClient, chainId, token: contracts.VSPToken as `0x${string}`, amountVsp: amount, expiresDays: d, config: cfg });
+      const inv = await issueInvite({ walletClient, publicClient, chainId, token: contracts.VSPToken as `0x${string}`, amountVsp: amount, expiresDays: d, config: cfg, postId });
       toast(`${inv.amount_vsp} VSP escrowed from your wallet for this invitation.`, "success");
       onIssued(inv);
     } catch (e: any) {
@@ -57,11 +57,11 @@ export function InviteForm({ onIssued, compact = false }: { onIssued: (inv: Invi
 
   return (
     <div data-testid="invite-form" style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
-      {!compact && <div style={{ color: S.textMuted }}>The VSP leaves your wallet now and waits behind a code; unredeemed by the expiry, or revoked, it comes back.</div>}
+      {!compact && <div style={{ color: S.textMuted }}>The VSP leaves your wallet now and waits behind a code{postId != null ? ` for claim #${postId}` : ""}; unredeemed by the expiry, or revoked, it comes back.</div>}
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <label>VSP <input data-testid="invite-amount" style={input} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
-        <label>days <input data-testid="invite-days" style={input} value={days} onChange={(e) => setDays(e.target.value)} inputMode="numeric" /></label>
-        <button type="button" data-testid="invite-submit" style={primary} disabled={busy} onClick={submit}>{busy ? "Signing…" : "Put it on the table"}</button>
+        <label>Amount <input data-testid="invite-amount" style={input} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /> VSP</label>
+        <label>· Expires in <input data-testid="invite-days" style={{ ...input, width: 56 }} value={days} onChange={(e) => setDays(e.target.value)} inputMode="numeric" /> days</label>
+        <button type="button" data-testid="invite-submit" style={primary} disabled={busy} onClick={submit}>{busy ? "Signing…" : "Create invitation"}</button>
       </div>
       {cfg && <div style={{ color: S.textFaint, fontSize: 10 }}>{cfg.min_vsp}–{cfg.max_vsp} VSP, up to {cfg.max_days} days, {cfg.max_outstanding} open at a time. One signature; no gas.</div>}
       {err && <div data-testid="invite-error" style={{ color: S.red }}>{err}</div>}
@@ -77,63 +77,82 @@ export function InvitesList() {
   const [max, setMax] = useState(100);
   const [issued, setIssued] = useState<InviteIssued | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const load = () => { if (address) listInvites(address).then((d) => { setRows(d.invites); setOpen(d.open); setMax(d.max_outstanding); }).catch(() => setRows([])); };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [address]);
 
   if (!isConnected || !address) return null;
   const copy = async (t: string) => { try { await navigator.clipboard.writeText(t); toast("Copied.", "success"); } catch { toast("Could not copy.", "error"); } };
+  const goTo = (postId: number) => window.dispatchEvent(new CustomEvent("verisphere:navigate", { detail: { view: "claims", postId } }));
+  const visible = rows ? (showAll ? rows : rows.filter((r) => r.status === "open")) : [];
+  const closedCount = rows ? rows.filter((r) => r.status !== "open").length : 0;
 
   return (
-    <section data-testid="invites-list" style={{ marginTop: 20, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, background: "#fff" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Invitations</div>
-          <div style={{ fontSize: 11, color: S.textMuted }}>Put VSP on the table for someone new. {open} open of {max}.</div>
-        </div>
+    <section data-testid="invites-list" style={{ marginTop: 12, border: `1px solid ${S.border}`, borderRadius: 10, padding: "8px 12px", background: "#fff", fontSize: 11 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontWeight: 700, fontSize: 13 }}>Invitations</span>
+        <span style={{ color: S.textMuted }}>VSP you set aside for newcomers · {open} open of {max}</span>
+        <span style={{ flex: 1 }} />
+        <button type="button" data-testid="invite-new" style={showForm ? btn : primary} onClick={() => { setShowForm((v) => !v); setIssued(null); }}>{showForm ? "Close" : "New invitation"}</button>
       </div>
-      <div style={{ marginTop: 10 }}>
-        <InviteForm onIssued={(inv) => { setIssued(inv); load(); }} />
-        {issued && (
-          <div data-testid="invite-issued" style={{ marginTop: 8, background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 10, fontSize: 12 }}>
-            Code <code style={{ fontWeight: 700, fontSize: 13 }}>{issued.code}</code> · {issued.amount_vsp} VSP · {daysLeft(issued.expires_at)} days
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <button type="button" style={btn} onClick={() => copy(issued.code)}>Copy code</button>
-              <button type="button" style={btn} onClick={() => copy(`${window.location.origin}/claims?code=${encodeURIComponent(issued.code)}&start=1`)}>Copy link</button>
+      {showForm && (
+        <div style={{ marginTop: 8 }}>
+          <InviteForm onIssued={(inv) => { setIssued(inv); load(); }} />
+          {issued && (
+            <div data-testid="invite-issued" style={{ marginTop: 8, background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 10, fontSize: 12 }}>
+              Code <code style={{ fontWeight: 700, fontSize: 13 }}>{issued.code}</code> · {issued.amount_vsp} VSP · expires in {daysLeft(issued.expires_at)} days
+              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                <button type="button" style={btn} onClick={() => copy(issued.code)}>Copy code</button>
+                <button type="button" style={btn} onClick={() => copy(`${window.location.origin}/claims?code=${encodeURIComponent(issued.code)}&start=1`)}>Copy link</button>
+              </div>
+              <div style={{ color: S.textMuted, marginTop: 6, fontSize: 11 }}>Shown once — the code is not stored anywhere in the clear. Send it to one person; they pick any claim.</div>
             </div>
-            <div style={{ color: S.textMuted, marginTop: 6, fontSize: 11 }}>Shown once — the code is not stored anywhere in the clear. Send it to one person.</div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
       {rows && rows.length > 0 && (
-        <table style={{ width: "100%", marginTop: 12, fontSize: 11, borderCollapse: "collapse" }}>
-          <thead><tr style={{ color: S.textFaint, textAlign: "left" }}><th style={{ padding: "4px 6px" }}>Amount</th><th style={{ padding: "4px 6px" }}>State</th><th style={{ padding: "4px 6px" }}>Expires</th><th></th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} data-testid="invite-row" style={{ borderTop: `1px solid ${S.borderLight}` }}>
-                <td style={{ padding: "6px" }}>{r.amount_vsp} VSP</td>
-                <td style={{ padding: "6px" }}>
-                  {r.status === "open" ? <span style={{ color: VIOLET, fontWeight: 600 }}>open</span>
-                    : r.status === "redeemed" ? <span style={{ color: S.green }}>redeemed by {r.redeemed_by?.slice(0, 6)}…{r.redeemed_by?.slice(-4)}</span>
-                    : <span style={{ color: S.textMuted }}>{r.status}, refunded</span>}
-                </td>
-                <td style={{ padding: "6px", color: S.textMuted }}>{r.status === "open" ? `${daysLeft(r.expires_at)} d` : new Date(r.closed_at ?? r.redeemed_at ?? r.expires_at).toLocaleDateString()}</td>
-                <td style={{ padding: "6px", textAlign: "right" }}>
-                  {r.status === "open" && (
-                    <button type="button" data-testid="invite-revoke" style={{ ...btn, color: "#B91C1C", borderColor: "#FECACA" }} disabled={busy === r.code_hash}
-                      onClick={async () => {
-                        if (!walletClient) return;
-                        setBusy(r.code_hash);
-                        try { const d = await revokeInvite(walletClient, r.code_hash); toast(`${d.amount_vsp} VSP returned to your wallet.`, "success"); load(); }
-                        catch (e: any) { toast(e?.shortMessage || e?.message || "Could not revoke.", "error"); }
-                        finally { setBusy(null); }
-                      }}>Revoke</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <table style={{ width: "100%", marginTop: 6, fontSize: 11, borderCollapse: "collapse" }}>
+            <thead><tr style={{ color: S.textFaint, textAlign: "left" }}><th style={{ padding: "2px 6px", fontWeight: 600 }}>Amount</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>For</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>State</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>Expires</th><th></th></tr></thead>
+            <tbody>
+              {visible.map((r) => (
+                <tr key={r.id} data-testid="invite-row" style={{ borderTop: `1px solid ${S.borderLight}` }}>
+                  <td style={{ padding: "4px 6px" }}>{r.amount_vsp} VSP</td>
+                  <td style={{ padding: "4px 6px" }} data-testid="invite-for">
+                    {r.post_id != null
+                      ? <a href={`/claims?post=${r.post_id}`} onClick={(e) => { e.preventDefault(); goTo(r.post_id!); }} style={{ color: VIOLET }}>claim #{r.post_id}</a>
+                      : <span style={{ color: S.textMuted }}>any claim</span>}
+                  </td>
+                  <td style={{ padding: "4px 6px" }}>
+                    {r.status === "open" ? <span style={{ color: VIOLET, fontWeight: 600 }}>open</span>
+                      : r.status === "redeemed" ? <span style={{ color: S.green }}>redeemed by {r.redeemed_by?.slice(0, 6)}…{r.redeemed_by?.slice(-4)}</span>
+                      : <span style={{ color: S.textMuted }}>{r.status}, refunded</span>}
+                  </td>
+                  <td style={{ padding: "4px 6px", color: S.textMuted }}>{r.status === "open" ? `in ${daysLeft(r.expires_at)} d` : new Date(r.closed_at ?? r.redeemed_at ?? r.expires_at).toLocaleDateString()}</td>
+                  <td style={{ padding: "2px 6px", textAlign: "right" }}>
+                    {r.status === "open" && (
+                      <button type="button" data-testid="invite-revoke" style={{ ...btn, height: 24, color: "#B91C1C", borderColor: "#FECACA" }} disabled={busy === r.code_hash}
+                        onClick={async () => {
+                          if (!walletClient) return;
+                          setBusy(r.code_hash);
+                          try { const d = await revokeInvite(walletClient, r.code_hash); toast(`${d.amount_vsp} VSP returned to your wallet.`, "success"); load(); }
+                          catch (e: any) { toast(e?.shortMessage || e?.message || "Could not revoke.", "error"); }
+                          finally { setBusy(null); }
+                        }}>Revoke</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {closedCount > 0 && (
+            <button type="button" data-testid="invite-toggle-closed" onClick={() => setShowAll((v) => !v)} style={{ background: "none", border: 0, color: S.textMuted, cursor: "pointer", fontSize: 10, padding: "4px 6px 0" }}>
+              {showAll ? "Hide redeemed and closed" : `Show ${closedCount} redeemed / closed`}
+            </button>
+          )}
+        </>
       )}
     </section>
   );
