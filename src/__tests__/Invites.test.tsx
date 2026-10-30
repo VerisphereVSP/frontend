@@ -22,10 +22,12 @@ import { InviteForm, RedeemInvite, InvitesList } from "../components/Invitations
 const CONFIG = { escrow_address: "0x000000000000000000000000000000000000e5c0", min_vsp: "0.5", max_vsp: "100", max_days: 365, max_outstanding: 100, default_days: 30 };
 
 describe("invites helpers", () => {
-  it("withInvite appends the code to the link and a line to the text", () => {
-    const { url, text } = withInvite("https://app.verisphere.co/c/9", "Think it's wrong? “x” — … Challenge it: https://app.verisphere.co/c/9", "VSP-AAAA-BBBB-CCCC", "2");
+  it("withInvite appends the code to the link and puts the invitation line above the trailing link", () => {
+    const { url, text } = withInvite("https://app.verisphere.co/c/9", "“x”\n72 % of stake on Verisphere backs it. Agree? Support it. Disagree? Challenge it.\nhttps://app.verisphere.co/c/9", "VSP-AAAA-BBBB-CCCC", "2");
     expect(url).toBe("https://app.verisphere.co/c/9?code=VSP-AAAA-BBBB-CCCC");
-    expect(text).toContain("Challenge it: https://app.verisphere.co/c/9?code=VSP-AAAA-BBBB-CCCC I've put 2 VSP on the table for you");
+    expect(text.split("\n")).toEqual(["“x”", "72 % of stake on Verisphere backs it. Agree? Support it. Disagree? Challenge it.", "I've put 2 VSP on the table for you — the link carries it.", url]);
+    // older one-line text form: the line goes after the link
+    expect(withInvite("https://x/c/9", "… Challenge it: https://x/c/9", "C", "1").text).toBe("… Challenge it: https://x/c/9?code=C I've put 1 VSP on the table for you — the link carries it.");
   });
   it("codeFromLocation and daysLeft", () => {
     expect(codeFromLocation("?post=9&side=support&code=VSP-AAAA-BBBB-CCCC&start=1")).toBe("VSP-AAAA-BBBB-CCCC");

@@ -78,7 +78,12 @@ export async function revokeInvite(walletClient: WalletClient, codeHash: string)
 /** The share link and text form with an invitation attached. */
 export function withInvite(shareUrl: string, shareText: string, code: string, amountVsp: string): { url: string; text: string } {
   const url = `${shareUrl}${shareUrl.includes("?") ? "&" : "?"}code=${encodeURIComponent(code)}`;
-  const text = `${shareText.replace(shareUrl, url)} I've put ${amountVsp} VSP on the table for you — the link carries it.`;
+  const line = `I've put ${amountVsp} VSP on the table for you — the link carries it.`;
+  // the text form ends with the link alone on its last line (chat apps unfurl it best there): the invitation goes just above it
+  const parts = shareText.split("\n");
+  const text = parts.length > 1 && parts[parts.length - 1].trim() === shareUrl
+    ? [...parts.slice(0, -1), line, url].join("\n")
+    : `${shareText.replace(shareUrl, url)} ${line}`;
   return { url, text };
 }
 
