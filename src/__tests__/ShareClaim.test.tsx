@@ -11,7 +11,7 @@ vi.mock("../components/Invitations", () => ({
   InviteForm: ({ onIssued }: any) => <button data-testid="fake-invite-form" onClick={() => onIssued({ code: "VSP-AAAA-BBBB-CCCC", code_hash: "h", amount_vsp: "2", expires_at: "2026-12-01T00:00:00Z", escrow_tx: "0x1", sponsor: "0xs" })}>fake form</button>,
 }));
 
-import ShareClaim, { snapshotHtml } from "../components/ShareClaim";
+import ShareClaim, { snapshotHtml, sharePayload, shareSnapshot } from "../components/ShareClaim";
 
 const SNAP = {
   post_id: 142, text: "Regular coffee consumption is associated with a lower risk of stroke.",
@@ -180,5 +180,23 @@ describe("ShareClaim", () => {
     expect(shared).toContain('<ShareClaim postId={c.post_id} variant="button" />');
     const article = readFileSync(resolve(process.cwd(), "src/components/article/ArticleView.tsx"), "utf8");
     expect((article.match(/<ShareClaim postId=\{s\.post_id\} variant="icon" onActivate=\{\(\) => \{ if \(selId !== s\.sentence_id\) \{ setSelId\(s\.sentence_id\);/g) || []).length).toBe(2);  // both Explore lanes select the sentence (patch_fe_share_fixes)
+  });
+});
+
+describe("native share payload", () => {  // patch_fe_share_once
+  it("passes the link once: inside the text when the text ends with it, as url only otherwise", async () => {
+    const withLink = { ...SNAP } as any;
+    expect(sharePayload(withLink)).toEqual({ title: "Verisphere Snapshot of claim #142", text: SNAP.share_text });
+    const without = { ...SNAP, share_text: "just words" } as any;
+    expect(sharePayload(without)).toEqual({ title: "Verisphere Snapshot of claim #142", text: "just words", url: SNAP.share_url });
+    // and shareSnapshot hands that payload to navigator.share (no image here: fetch fails, the share goes on without it)
+    const share = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { ...navigator, share, canShare: () => false });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
+    expect(await shareSnapshot(withLink)).toBe("shared");
+    const sent = (share.mock.calls[0] as any[])[0];
+    expect(sent.url).toBeUndefined();
+    expect(sent.text.trim().endsWith(SNAP.share_url)).toBe(true);
+    vi.unstubAllGlobals();
   });
 });

@@ -88,10 +88,17 @@ export function canNativeShare(): boolean {
   return typeof navigator !== "undefined" && typeof (navigator as any).share === "function";
 }
 
-/** The native share sheet: image + text + link together where files are accepted, text + link otherwise. */
+/** The native share sheet: image + text together where files are accepted, text otherwise. patch_fe_share_once: the text
+ *  form already ends with the link, and share targets append `url` to `text` — passing both posted the link twice
+ *  (WhatsApp desktop, 10-30). `url` goes along only when the text does not carry it. */
+export function sharePayload(snap: Snapshot): { title: string; text: string; url?: string } {
+  const title = `Verisphere Snapshot of claim #${snap.post_id}`;
+  return snap.share_text.includes(snap.share_url) ? { title, text: snap.share_text } : { title, text: snap.share_text, url: snap.share_url };
+}
+
 export async function shareSnapshot(snap: Snapshot): Promise<"shared" | "cancelled" | "failed"> {
   const nav: any = navigator;
-  const base = { title: `Verisphere Snapshot of claim #${snap.post_id}`, text: snap.share_text, url: snap.share_url };
+  const base = sharePayload(snap);
   try {
     let data: any = base;
     try {
