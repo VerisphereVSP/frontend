@@ -6,7 +6,9 @@
 import { useEffect, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useWalletClient } from "wagmi";
 import { useContracts } from "../contracts";
-import { S } from "./claims-shared";
+// No import from ./claims-shared here: this module sits in the claims-shared → ShareClaim → Invitations cycle, and a
+// top-level read of its `S` crashed the app (TDZ) on 10-30. Same palette, as literals.
+const S = { text: "#2d3748", textMuted: "#718096", textFaint: "#a0aec0", border: "#e2e8f0", borderLight: "#edf2f7", green: "#38a169", red: "#e53e3e" } as const;
 import {
   daysLeft, fetchInviteConfig, issueInvite, listInvites, peekInvite, redeemInvite, revokeInvite,
   type InviteConfig, type InviteIssued, type InvitePeek, type InviteRow,
