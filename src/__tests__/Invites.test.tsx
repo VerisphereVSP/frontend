@@ -17,7 +17,7 @@ vi.mock("wagmi", () => ({ useAccount: () => wagmiState, useWalletClient: () => (
 vi.mock("../contracts", () => ({ useContracts: () => ({ data: { VSPToken: "0x0000000000000000000000000000000000000001" } }) }));
 
 import { withInvite, codeFromLocation, daysLeft } from "../wallet/invites";
-import { InviteForm, RedeemInvite } from "../components/Invitations";
+import { InviteForm, RedeemInvite, InvitesList } from "../components/Invitations";
 
 const CONFIG = { escrow_address: "0x000000000000000000000000000000000000e5c0", min_vsp: "0.5", max_vsp: "100", max_days: 365, max_outstanding: 100, default_days: 30 };
 
@@ -62,9 +62,19 @@ describe("InviteForm", () => {
     expect(signed[0].message.nonce).toBe(7n);
     const post = calls.find((c) => c.init?.method === "POST")!;
     const body = JSON.parse(String(post.init!.body));
-    expect(body.amount_vsp).toBe("2"); expect(body.expires_days).toBe(14);
+    expect(body.amount_vsp).toBe("2"); expect(body.expires_days).toBe(14); expect(body.post_id).toBeNull();
     expect(body.permit.spender).toBe(CONFIG.escrow_address); expect(body.permit.owner).toBe(wagmiState.address);
     expect(issued.mock.calls[0][0].code).toBe("VSP-QQQQ-WWWW-EEEE");
+  });
+
+  it("sends the claim it was shared from, and says so", async () => {  // patch_fe_invites_2
+    render(<InviteForm onIssued={vi.fn()} postId={116} />);
+    await waitFor(() => expect(screen.getByTestId("invite-form").textContent).toContain("for claim #116"));
+    expect(screen.getByTestId("invite-form").textContent).toContain("Expires in");
+    expect(screen.getByTestId("invite-submit").textContent).toBe("Create invitation");
+    await act(async () => { fireEvent.click(screen.getByTestId("invite-submit")); });
+    await waitFor(() => expect(calls.some((c) => c.init?.method === "POST")).toBe(true));
+    expect(JSON.parse(String(calls.find((c) => c.init?.method === "POST")!.init!.body)).post_id).toBe(116);
   });
 
   it("checks the knobs before asking for a signature", async () => {
@@ -110,12 +120,38 @@ describe("RedeemInvite", () => {
   });
 });
 
+describe("InvitesList", () => {  // patch_fe_invites_2
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+  it("is compact: form behind a button, open codes with their claim, closed ones behind a toggle", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).includes("/invites?sponsor=")) return { ok: true, json: async () => ({ sponsor: wagmiState.address, open: 1, max_outstanding: 100, invites: [
+        { id: 2, code_hash: "h2", amount_vsp: "2", created_at: "2026-10-30T09:00:00Z", expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(), status: "open", redeemed_by: null, redeemed_at: null, escrow_tx: "0x1", redeem_tx: null, refund_tx: null, closed_at: null, post_id: 116 },
+        { id: 1, code_hash: "h1", amount_vsp: "1", created_at: "2026-10-29T09:00:00Z", expires_at: "2026-11-28T09:00:00Z", status: "redeemed", redeemed_by: "0x00000000000000000000000000000000000000ab", redeemed_at: "2026-10-29T10:00:00Z", escrow_tx: "0x1", redeem_tx: "0x2", refund_tx: null, closed_at: null, post_id: null },
+      ] }) } as any;
+      if (String(url).endsWith("/invites/config")) return { ok: true, json: async () => CONFIG } as any;
+      return { ok: false, status: 404, json: async () => ({}) } as any;
+    }));
+    render(<InvitesList />);
+    await waitFor(() => screen.getAllByTestId("invite-row"));
+    expect(screen.queryByTestId("invite-form")).toBeNull();                       // form only on demand
+    expect(screen.getAllByTestId("invite-row").length).toBe(1);                   // closed rows hidden
+    expect(screen.getByTestId("invite-for").textContent).toBe("claim #116");
+    expect(screen.getByTestId("invites-list").textContent).toContain("1 open of 100");
+    fireEvent.click(screen.getByTestId("invite-toggle-closed"));
+    expect(screen.getAllByTestId("invite-row").length).toBe(2);
+    expect(screen.getAllByTestId("invite-for")[1].textContent).toBe("any claim");
+    fireEvent.click(screen.getByTestId("invite-new"));
+    await waitFor(() => screen.getByTestId("invite-form"));
+  });
+});
+
 describe("mounts", () => {
   it("Positions carries the list; Claims carries the redeem card and the collapsed-row share icon", () => {
     const portfolio = readFileSync(resolve(process.cwd(), "src/components/Portfolio.tsx"), "utf8");
     expect(portfolio).toContain("<InvitesList />");
     const claims = readFileSync(resolve(process.cwd(), "src/components/ClaimsExplorer.tsx"), "utf8");
     expect(claims).toContain("{inviteCode && <RedeemInvite code={inviteCode} />}");
+    expect(claims).toContain("{loading && sorted.length === 0 ? (");  // patch_fe_invites_2: a refetch no longer unmounts the rows
     expect(claims).toContain('<ShareClaim postId={c.post_id} variant="icon" onActivate={() => setExpandedId(c.post_id)} />');
     expect(claims.indexOf("<Jazzicon address={c.creator} size={16} />")).toBeLessThan(claims.indexOf('variant="icon" onActivate={() => setExpandedId(c.post_id)}'));
   });

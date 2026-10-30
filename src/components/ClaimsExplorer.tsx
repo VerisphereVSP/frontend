@@ -257,7 +257,7 @@ export default function ClaimsExplorer() {
       </div>
 
       {/* Table */}
-      {loading ? (
+      {loading && sorted.length === 0 ? (  /* patch_fe_invites_2: a refetch keeps the table (and the expanded row) on screen */
         <div style={{ padding: 40, textAlign: "center", color: S.textFaint }}>Loading claims…</div>
       ) : error ? (
         <div style={{ padding: 40, textAlign: "center", color: S.red }}>{error}</div>
