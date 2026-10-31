@@ -6,7 +6,7 @@ import { parseUnits } from "viem";
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
-export interface InviteConfig { escrow_address: Address; min_vsp: string; max_vsp: string; max_days: number; max_outstanding: number; default_days: number }
+export interface InviteConfig { escrow_address: Address; min_vsp: string; max_vsp: string; max_days: number; max_outstanding: number; default_days: number; newcomers_only?: boolean }  // patch_fe_invites_4: knob, read-only here
 export interface InviteIssued { code: string; code_hash: string; amount_vsp: string; expires_at: string; escrow_tx: string; sponsor: string; post_id?: number | null }
 export interface InvitePeek { status: "open" | "redeemed" | "revoked" | "expired"; amount_vsp: string; expires_at: string; post_id?: number | null }
 export interface InviteRow {
