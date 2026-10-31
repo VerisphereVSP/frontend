@@ -10,6 +10,8 @@ import { TxProgress } from "./components/article";
 import WalletPromptBar from "./components/WalletPromptBar";  // patch_fe_gas_fee
 import ClaimsExplorer from "./components/ClaimsExplorer";
 import Portfolio from "./components/Portfolio";
+import StartOverlay from "./components/StartOverlay";  // patch_fe_start
+import { startParams } from "./components/start-params";  // patch_fe_start
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 type View = "explore" | "claims" | "portfolio" | "transactions";  /* patch_bundle04_5_p3_tx_nav */
@@ -390,6 +392,9 @@ export default function App() {
   const { unreadCount, markAllRead } = useNotifications();  /* patch_bundle04_5_p3_tx_nav */
   const navigate = useNavigate();
   const location = useLocation();
+  // patch_fe_start: a share page's "Back it with VSP" lands at /claims?post=&side=&start=1[&code=] — the Start walk-through
+  // opens over the Claims view once, on arrival, and closes into the plain claim
+  const [start, setStart] = useState(() => startParams());
   // patch_bundle04_5_p3_tx_pathname
   const view = location.pathname === "/claims" ? "claims"
     : location.pathname === "/portfolio" ? "portfolio"
@@ -750,6 +755,7 @@ export default function App() {
 
       <TxProgress />
       <WalletPromptBar />  {/* patch_fe_gas_fee: persistent "signature request waiting" bar */}
+      {view === "claims" && start && <StartOverlay postId={start.postId} side={start.side} code={start.code} onClose={() => setStart(null)} />}  {/* patch_fe_start */}
 
       {/* Footer */}
       <footer className="footer" style={{ flexShrink: 0 }}>
