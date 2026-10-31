@@ -10,6 +10,7 @@ import { useCreateLink, useStake } from "@verisphere/protocol";
 import ShareClaim from "./ShareClaim";  // patch_fe_invites: share icon in collapsed rows
 import { RedeemInvite } from "./Invitations";  // patch_fe_invites
 import { codeFromLocation } from "../wallet/invites";  // patch_fe_invites
+import { startParams } from "./start-params";  // patch_fe_start
 import {
   S, GRID, LINK_GRID, formatAge,
   AddressTooltip, QueueView, Badge, ExpandedClaimDetail,
@@ -192,7 +193,7 @@ export default function ClaimsExplorer() {
     { key: "topic", label: "Topic" },
   ];
 
-  const inviteCode = codeFromLocation();  // patch_fe_invites: a share link carried an invitation
+  const inviteCode = startParams() ? null : codeFromLocation();  // patch_fe_invites: a share link carried an invitation (patch_fe_start: the overlay owns it on arrival)
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column" as const, height: "100%", minHeight: 0 }}>
       {inviteCode && <RedeemInvite code={inviteCode} />}
