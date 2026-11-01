@@ -2,7 +2,7 @@
 
 <!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax --><!-- patch_fe_docs_ext_phone -->
 
-Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. If the claim holds up, you earn; if it doesn't, you lose. What counts as credible is decided by what people are willing to stake, not by votes or likes.
+Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most. What counts as credible is decided by what people are willing to stake, not by votes or likes. <!-- patch_payoff -->
 
 This guide takes you from nothing to your first stake. If you have never used a crypto wallet, budget about **45 minutes** the first time — most of it waiting for an exchange. After that, every action takes seconds.
 
