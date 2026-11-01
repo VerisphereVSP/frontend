@@ -11,6 +11,7 @@ import { peekInvite, redeemInvite, type InvitePeek } from "../wallet/invites";
 import { PASSKEY_CONNECTOR_ID } from "../wallet/passkey/connector";
 import { useToast } from "./Toast";
 import { closedStartUrl, type Side } from "./start-params";
+import { onceTracker } from "../funnel";  // patch_fe_funnel
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -56,6 +57,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const amountTouched = useRef(false);
+  const seen = useRef(onceTracker());  // patch_fe_funnel: anonymous step counts, each once per sheet
 
   // the claim, as the share page showed it
   useEffect(() => {
@@ -99,6 +101,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   }, [balance, redeemed, feeCap]);
 
   const close = () => {
+    if (!done) seen.current("start_skip");
     try { window.history.replaceState(null, "", closedStartUrl(window.location.pathname, window.location.search)); } catch { /* fine */ }
     onClose();
   };
@@ -106,8 +109,15 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   const openPeek = peek !== null && peek !== "missing" && peek.status === "open" ? peek : null;
   const inviteOpen = !!openPeek && !redeemed;
   const stepWallet = !isConnected;
-  const stepVsp = !stepWallet && (inviteOpen || (balance != null && balance <= 0 && !redeemed));
+  const checking = !stepWallet && balance == null && !redeemed;  // connected, balance not read yet: stay on step 2
+  const stepVsp = !stepWallet && (inviteOpen || checking || (balance != null && balance <= 0 && !redeemed));
   const step = done ? 4 : stepWallet ? 1 : stepVsp ? 2 : 3;
+  useEffect(() => { seen.current("start_open"); }, []);
+  useEffect(() => {
+    if (step >= 2) seen.current("start_wallet");
+    if (step >= 3) seen.current("start_funded");
+    if (step === 4) seen.current("start_staked");
+  }, [step]);
 
   const connectPasskey = async () => {
     const pk = connectors.find((c) => c.id === PASSKEY_CONNECTOR_ID);
@@ -198,7 +208,8 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
             <button type="button" data-testid="start-claim" style={primary} disabled={busy === "claim"} onClick={claim}>{busy === "claim" ? "Claiming…" : `Claim ${openPeek.amount_vsp} VSP`}</button>
           </div>
         )}
-        {step === 2 && !inviteOpen && (
+        {step === 2 && !inviteOpen && checking && <div data-testid="start-checking" style={{ marginLeft: 34, fontSize: 13, color: P.faint }}>Checking your wallet…</div>}
+        {step === 2 && !inviteOpen && !checking && (
           <div data-testid="start-step-fund" style={{ marginLeft: 34 }}>
             <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}>This wallet holds no VSP yet. The market panel sells VSP for AVAX; paying by card is coming. Or ask whoever shared this claim for an invitation — it arrives as a link like this one.</p>
             <button type="button" data-testid="start-recheck" style={btn} onClick={async () => { if (address) { const b = await vspBalance(address); if (b != null) setBalance(b); } }}>I have VSP now</button>
