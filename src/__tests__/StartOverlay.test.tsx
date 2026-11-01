@@ -124,3 +124,31 @@ describe("StartOverlay", () => {
     expect(overlay).not.toContain("claims-shared");
   });
 });
+
+describe("funnel counts (patch_fe_funnel)", () => {
+  it("counts open → wallet → funded → staked once each, anonymously; skip counts start_skip", async () => {
+    const posted: string[] = [];
+    const readBlob = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(b); });  // jsdom's Blob has no .text()
+    const beacon = vi.fn((_url: string, blob: Blob) => { readBlob(blob).then((t) => posted.push(JSON.parse(t).step)); return true; });
+    vi.stubGlobal("navigator", { ...navigator, sendBeacon: beacon });
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    render(<StartOverlay postId={142} side="support" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-claim"));
+    await act(async () => { screen.getByTestId("start-claim").click(); });
+    await waitFor(() => screen.getByTestId("start-stake"));
+    await waitFor(() => expect((screen.getByTestId("start-amount") as HTMLInputElement).value).toBe("1.75"));
+    await act(async () => { screen.getByTestId("start-stake").click(); });
+    await waitFor(() => screen.getByTestId("start-done"));
+    await waitFor(() => expect(posted).toEqual(["start_open", "start_wallet", "start_funded", "start_staked"]));
+    for (const call of beacon.mock.calls) expect(call[0]).toBe("/api/funnel");
+    const bodies = await Promise.all(beacon.mock.calls.map((c: any[]) => readBlob(c[1])));
+    for (const b of bodies) expect(Object.keys(JSON.parse(b))).toEqual(["step"]);  // the step and nothing else
+    await act(async () => { screen.getByTestId("start-see-claim").click(); });
+    expect(posted).not.toContain("start_skip");  // closing after the stake is not a skip
+    cleanup(); posted.length = 0; balanceWei = "0";  // the redeem above funded the mock wallet
+    render(<StartOverlay postId={142} side="support" code={null} onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-step-fund"));
+    await act(async () => { screen.getByTestId("start-skip").click(); });
+    await waitFor(() => expect(posted).toEqual(["start_open", "start_wallet", "start_skip"]));  // no VSP: never 'funded'
+  });
+});
