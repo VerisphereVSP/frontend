@@ -12,6 +12,7 @@ import ClaimsExplorer from "./components/ClaimsExplorer";
 import Portfolio from "./components/Portfolio";
 import StartOverlay from "./components/StartOverlay";  // patch_fe_start
 import { startParams } from "./components/start-params";  // patch_fe_start
+import InstallExtension from "./components/InstallExtension";  // patch_fe_install_ext
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 type View = "explore" | "claims" | "portfolio" | "transactions";  /* patch_bundle04_5_p3_tx_nav */
@@ -764,6 +765,7 @@ export default function App() {
         <a href="/docs/viewer.html?file=about.md">About</a>
         <a href="/docs/viewer.html?file=tos.md">Terms of Service</a>
         <a href="/docs/viewer.html?file=privacy.md">Privacy</a>  {/* patch_fe_legal_docs */}
+        <InstallExtension variant="link" where="footer" />  {/* patch_fe_install_ext: desktop Chromium only, hidden once installed */}
         <a href="/docs/viewer.html?file=fees.md">Fees</a>
         <a href="/docs/viewer.html?file=content-policy.md">Content policy</a>  {/* patch_report_path */}
         <span>© {new Date().getFullYear()} Verisphere</span>
