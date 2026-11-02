@@ -1,23 +1,43 @@
 # How to Play Verisphere
 
-<!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax --><!-- patch_fe_docs_ext_phone -->
+<!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax --><!-- patch_fe_docs_ext_phone --><!-- patch_guide_v3: passkey, invitations, sharing, extension -->
 
 Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most. What counts as credible is decided by what people are willing to stake, not by votes or likes. <!-- patch_payoff -->
 
-This guide takes you from nothing to your first stake. If you have never used a crypto wallet, budget about **45 minutes** the first time — most of it waiting for an exchange. After that, every action takes seconds.
+This guide takes you from nothing to your first stake. The quickest way in takes **about a minute**: a passkey wallet made by the app, and VSP from a friend's invitation link. Buying VSP yourself through an exchange takes longer the first time — most of it waiting for the exchange — and every action after that takes seconds.
 
 **What you will need**
 
-- A desktop browser (Chrome, Firefox, Brave or Edge) with the MetaMask extension — or a phone with the MetaMask app (see **On a phone** below).
-- Optional: the **Verisphere Chrome extension** ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok); Chrome, Brave and Edge) — it underlines the stakeable claims in any English Wikipedia article and lets you stake from the page. See **Verisphere on Wikipedia** in Part 2.
-- Some **AVAX**, the Avalanche network's own coin. It does two jobs: it is what you **buy VSP with** (the default), and it pays the network fee ("gas") for the buy and sell transactions — a fraction of a cent each. **0.1 AVAX** is enough to buy a starter amount of VSP and leave gas to spare. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free.
-- Optional: **USDC**, a dollar-pegged stablecoin. You can pay for VSP with USDC instead of AVAX if you already hold some on Avalanche; you still need a little AVAX for gas.
+- A browser — on a phone or a computer. No app to install.
+- A **wallet**. The app makes one for you from a passkey (face, fingerprint or PIN) — see **The quick way** below. If you already use **MetaMask**, that works too.
+- Some **VSP**, the token you stake. Three ways to get it: an **invitation link** from someone already playing (it carries VSP for you), **buying** it with AVAX inside the app (Part 1, *Buying VSP*), or, soon, paying by card. Everything you do *inside* Verisphere — staking, creating claims, linking evidence — is gas-free; only buying and selling touch AVAX, the Avalanche network's own coin.
+- Optional: the **Verisphere Chrome extension** ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok); Chrome, Brave and Edge) — it brings the game to the pages you read. See **The extension** in Part 2.
 
 ---
 
-## Part 1 — Set up your wallet
+## Part 1 — Get in
 
-### Step 1. Install MetaMask
+### The quick way: a passkey wallet (recommended)
+
+A passkey wallet is a wallet that lives behind your device's own lock — Face ID, fingerprint or PIN. There is nothing to install, no seed phrase to write down, and it works the same on a phone and a computer.
+
+1. Open [app.verisphere.co](https://app.verisphere.co) and tap **Connect Wallet**.
+2. Choose **Passkey** (first in the list). Your device asks you to confirm with face, fingerprint or PIN — that creates the passkey and, from it, your wallet. The header shows your new address.
+3. Next time, the same tap **unlocks** it. If your passkeys sync between your devices (iCloud Keychain, Google Password Manager), the same wallet appears on each of them; otherwise use the recovery key below.
+
+Next to your address a **passkey ▾** menu offers: **Copy address**, **Show recovery key** (write it down once and keep it offline — it restores the wallet in any wallet app if you ever lose the passkey), **Lock now**, and **Start over**. The key itself is derived on your device from the passkey each time you unlock; Verisphere never sees it, and it is held only while the page is open.
+
+What a passkey wallet cannot do yet: MetaMask's own **Buy** button, and the Wikipedia extension (which talks to MetaMask on the page). Both are coming; until then those two paths need MetaMask.
+
+### Arriving from a share link
+
+If someone sent you a link like `app.verisphere.co/c/12`, you can play without reading further. Tap **Support** or **Challenge** on that page (free, anonymous, just an opinion), then **Back it with VSP**. The app walks you through three steps: **a wallet** (the passkey above, one tap), **VSP** (if the link carries an invitation, **Claim** it into your wallet; if not, the app says how to get some), and **your side** — the amount is filled in, you can change it, one confirmation and you're in. You can skip at any step and just read the claim.
+
+### If you already use MetaMask
+
+The rest of Part 1 is the MetaMask path: install it, add the Avalanche network, get AVAX, connect, buy VSP. Skip it if the passkey route above is enough for you.
+
+#### Step 1. Install MetaMask
 
 1. Go to [metamask.io/download](https://metamask.io/download/) and install the extension for your browser. Only install from that address.
 2. Open it and choose **Create a new wallet**.
@@ -26,7 +46,7 @@ This guide takes you from nothing to your first stake. If you have never used a 
 
 Your wallet **address** is the `0x…` string at the top of MetaMask. Click it to copy. You will paste it into an exchange in Step 3.
 
-### Step 2. Add the Avalanche network
+#### Step 2. Add the Avalanche network
 
 Verisphere runs on **Avalanche C-Chain**. MetaMask has to be told about it once.
 
@@ -44,7 +64,7 @@ Manual alternative: MetaMask → network menu (top left) → **Add network** →
 
 Check: the network menu now reads **Avalanche C-Chain**. Stay on it for everything that follows.
 
-### Step 3. Get AVAX into your wallet
+#### Step 3. Get AVAX into your wallet
 
 One asset is enough: **AVAX** buys the VSP and pays the gas. The simplest route is an exchange account that withdraws to Avalanche.
 
@@ -58,7 +78,7 @@ Faster alternative: MetaMask's own **Buy** button sells AVAX by card or bank tra
 
 If you would rather pay with **USDC**, withdraw native USDC the same way (network Avalanche C-Chain, not Ethereum or Solana) and import it in MetaMask under **Tokens → Import tokens → Custom token** with the contract `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E` (symbol and 6 decimals fill in; Avalanche also has an older bridged "USDC.e" — Verisphere uses the native one). You still need a little AVAX for gas. [Circle's bridge](https://bridge.circle.com) moves USDC between Ethereum, Base and Avalanche; the [Core bridge](https://core.app/bridge/) moves other assets to Avalanche.
 
-### Step 4. Open the app and connect
+#### Step 4. Open the app and connect
 
 1. Go to [app.verisphere.co](https://app.verisphere.co).
 2. Click **Connect Wallet** (top right) and choose MetaMask. MetaMask opens: pick your account → **Next** → **Connect**. If it asks to switch to Avalanche C-Chain, approve that too.
@@ -66,7 +86,7 @@ If you would rather pay with **USDC**, withdraw native USDC the same way (networ
 
 Connecting is a permission, not a transaction: nothing moves and nothing is charged.
 
-### On a phone
+#### On a phone (MetaMask)
 
 The app works in Safari or Chrome on iPhone and Android with the **MetaMask app** installed:
 
@@ -77,7 +97,9 @@ The app works in Safari or Chrome on iPhone and Android with the **MetaMask app*
 
 Every prompt is the same as on desktop (spending caps, signature requests, AVAX transactions), shown in the MetaMask app instead of a browser pop-up.
 
-### Step 5. Buy VSP
+### Buying VSP
+
+Any connected wallet — passkey or MetaMask — can buy VSP in the app with **AVAX** (or USDC). A passkey wallet needs AVAX sent to its address first (copy it from **passkey ▾ → Copy address** and withdraw AVAX to it from an exchange on network **Avalanche C-Chain**, as in Step 3). Paying by card inside the app is coming.
 
 VSP trades on a public liquidity pool on Avalanche. Verisphere does not sell it; the **Buy** button executes a swap on that pool from your own wallet — the site never holds your funds.
 
@@ -106,6 +128,8 @@ Read each one — it names the token, the amount and who may spend it — and cl
 
 Creating a claim or a link *with an opening stake* is two actions in a row — first the post, then the stake — so expect two rounds of signature requests.
 
+**With a passkey wallet** there are no pop-ups at all: once unlocked, the wallet signs each action in the page, and the progress box is where you see what was signed. The same permissions apply; they are just granted without a prompt.
+
 ### Find your way around
 
 The header has four pages:
@@ -115,9 +139,17 @@ The header has four pages:
 - **Positions** — everything you have staked, with the score, rate and status of each position (connect your wallet to see it).
 - **Transactions** — the history of your actions, each with a link to the transaction on [snowtrace.io](https://snowtrace.io).
 
-### Verisphere on Wikipedia (extension)
+### Share a claim — and put VSP on the table
 
-The **Verisphere — Truth-staking for Wikipedia** extension ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok)) brings the same game to Wikipedia. Install it in Chrome, Brave or Edge, open any English Wikipedia article, and the sentences that state a claim already on Verisphere are **underlined**; click one to open the side panel with the claim's score and stake, and stake on it or challenge it there. Select a sentence nobody has staked on yet and the panel offers to **create the claim** from it; a sentence that states several claims offers all of them. The panel uses the same wallet, the same permissions and the same prompts as the app — it never holds keys or funds — and it reads from `app.verisphere.co`, so what you do there appears in **Positions** and **Transactions** here. Firefox and phones: use the app; the extension is desktop Chromium only for now.
+Every claim has a **Share** button (and a small share icon in the Claims list). It opens the claim's **Snapshot**: a card with the quote, the score and the standing. From there:
+
+- **Copy snapshot** copies a short text with the standing, the quote and the link — paste it into WhatsApp, Facebook, a message. The link unfurls into a card showing the score.
+- **Copy link** / **Copy image** copy just the link or just the card; on a phone, **Share** opens the system share sheet with both.
+- **Include an invitation** (shown when your wallet is connected) sets aside some of your VSP — you choose how much and for how long — so that the first person to open your link can **claim it** and stake without buying anything. The VSP moves to escrow when you confirm; the link then carries the invitation, and the snapshot is copied for you. Each invitation can be claimed once; it goes back to you if nobody claims it before it expires, and you can **Revoke** it earlier from **Positions**, where all your invitations are listed with their state.
+
+### The extension
+
+The **Verisphere** extension ([Chrome Web Store](https://chromewebstore.google.com/detail/hlpjnfmmhgccpnnildibenneggffkbok)) brings the same game to Wikipedia. Install it in Chrome, Brave or Edge, open any English Wikipedia article, and the sentences that state a claim already on Verisphere are **underlined**; click one to open the side panel with the claim's score and stake, and stake on it or challenge it there. Select a sentence nobody has staked on yet and the panel offers to **create the claim** from it; a sentence that states several claims offers all of them. The panel uses the same wallet, the same permissions and the same prompts as the app — it never holds keys or funds — and it reads from `app.verisphere.co`, so what you do there appears in **Positions** and **Transactions** here. Today the extension works on English Wikipedia and talks to **MetaMask** on the page; a passkey wallet cannot sign in it yet. Next: checking any sentence on any site (select it → right-click → *Check on Verisphere*), sharing from the panel, and the passkey. Firefox and phones: use the app; the extension is desktop Chromium only.
 
 ### Stake on a claim
 
@@ -202,8 +234,11 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 ## Quick reference
 
-| Action | Where | What it costs | What you click in MetaMask |
-|--------|-------|---------------|----------------------------|
+| Action | Where | What it costs | What you click in your wallet |
+|--------|-------|---------------|-------------------------------|
+| Make a passkey wallet | **Connect Wallet → Passkey** | Nothing | Face / fingerprint / PIN once |
+| Claim an invitation | The share link → **Back it with VSP** → **Claim** | Nothing (the sender's VSP) | Face / fingerprint / PIN (passkey) or Confirm (MetaMask) |
+| Share a claim / invite someone | **Share** on the claim → Copy snapshot / Include an invitation | An invitation escrows the VSP you choose, refunded if unclaimed | Signature ×1 for an invitation |
 | Get AVAX | Exchange → withdraw on Avalanche C-Chain (or MetaMask **Buy**) | Exchange fees | — (confirm on the exchange) |
 | Buy VSP with AVAX | **Buy** → amount → Buy | Pool fees 0.6 % (two pools) + tiny AVAX gas | **Confirm** ×1 (the swap) |
 | Buy VSP with USDC | **Buy** → USDC → Preview Fill → Buy | Pool fee 0.3 % + tiny AVAX gas | **Confirm** ×2 (approve, swap) |
@@ -217,6 +252,16 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 ---
 
 ## Troubleshooting
+
+**The Passkey option isn't in the Connect list.** Your browser has no passkey support (very old browser, or a locked-down one). Update it, use another browser, or use MetaMask.
+
+**My passkey wallet has a different address on my other device.** The passkey did not sync between the devices (different accounts, or syncing off), so the second device made a new wallet. On the device that holds your VSP: **passkey ▾ → Show recovery key**; on the other one, import that key into a wallet app, or simply keep using the first device.
+
+**I lost the device with my passkey.** If your passkeys sync (iCloud Keychain, Google Password Manager), sign in on the new device and the wallet is there. If not, the recovery key you wrote down restores it in any wallet app; without either, nobody can recover it.
+
+**It asks me to unlock every time I open the app.** That is by design: the key is derived only while the page is open and never stored. One tap.
+
+**I opened a share link and it says the invitation was already claimed or has expired.** Someone else got there first, or the sender's time limit passed. You can still take a side and stake with your own VSP, or ask the sender for a new link.
 
 **MetaMask doesn't show Avalanche.** Repeat Step 2; check the network menu reads Avalanche C-Chain. On a phone: **☰ → Settings → Networks → Add network → Popular networks → Avalanche C-Chain**.
 
@@ -248,4 +293,4 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 
 **I can't find my position.** **Positions** lists every stake with its score, rate and status.
 
-**I lost my Secret Recovery Phrase.** Nobody — not Verisphere, not MetaMask — can restore it. Move your funds to a new wallet whose phrase you have written down.
+**I lost my Secret Recovery Phrase (MetaMask).** Nobody — not Verisphere, not MetaMask — can restore it. Move your funds to a new wallet whose phrase you have written down. (A passkey wallet's equivalent is its recovery key: **passkey ▾ → Show recovery key**.)
