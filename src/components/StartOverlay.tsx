@@ -12,6 +12,7 @@ import { PASSKEY_CONNECTOR_ID } from "../wallet/passkey/connector";
 import { useToast } from "./Toast";
 import { closedStartUrl, type Side } from "./start-params";
 import { onceTracker } from "../funnel";  // patch_fe_funnel
+import InstallExtension from "./InstallExtension";  // patch_fe_install_ext
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
@@ -251,7 +252,10 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
         {step === 4 && (
           <div data-testid="start-done" style={{ marginLeft: 34 }}>
             <p style={{ margin: "0 0 10px", fontSize: 14, color: P.ink, lineHeight: 1.45 }}>You're in: <b>{amount} VSP {side === "support" ? "supporting" : "challenging"}</b> this claim. The score moves as others take sides; stakes settle once a day.</p>
-            <button type="button" data-testid="start-see-claim" style={primary} onClick={close}>See the claim</button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" data-testid="start-see-claim" style={primary} onClick={close}>See the claim</button>
+              <InstallExtension where="start" />
+            </div>
           </div>
         )}
 
