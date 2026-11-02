@@ -152,3 +152,18 @@ describe("funnel counts (patch_fe_funnel)", () => {
     await waitFor(() => expect(posted).toEqual(["start_open", "start_wallet", "start_skip"]));  // no VSP: never 'funded'
   });
 });
+
+describe("the rule (patch_payoff)", () => {
+  it("step 3 states the payoff in the agreed words, with the fine print, and the guide opens with the same rule", async () => {
+    balanceWei = "5000000000000000000";
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    render(<StartOverlay postId={142} side="support" code={null} onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-step-stake"));
+    expect(screen.getByTestId("start-rule").textContent).toBe("From tomorrow's settlement, your stake gains VSP every day the score stays on your side — and loses it every day it doesn't. The earlier you took the side, the better your rate. You can change or withdraw at any time.");
+    expect(screen.getByTestId("start-step-stake").textContent).toContain("At a score of 0 nobody gains or loses; rates are bounded.");
+    for (const banned of [/price/i, /invest/i, /return/i, /profit/i, /\btrue\b/i, /\bfalse\b/i]) expect(screen.getByTestId("start-overlay").textContent).not.toMatch(banned);
+    const guide = readFileSync(resolve(process.cwd(), "public/docs/guide.md"), "utf8");
+    expect(guide).toContain("Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most.");
+    expect(guide).not.toContain("If the claim holds up, you earn; if it doesn't, you lose.");
+  });
+});

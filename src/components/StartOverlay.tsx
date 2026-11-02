@@ -15,6 +15,10 @@ import { onceTracker } from "../funnel";  // patch_fe_funnel
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
+// patch_payoff — the rule, in the same words as the share page and the guide (Lavey, 11-01)
+export const THE_RULE = "From tomorrow's settlement, your stake gains VSP every day the score stays on your side — and loses it every day it doesn't. The earlier you took the side, the better your rate. You can change or withdraw at any time.";
+export const RULE_FINE_PRINT = "At a score of 0 nobody gains or loses; rates are bounded.";
+
 const P = { violet: "#5B4BC4", violetDeep: "#37299B", tint: "#EDEAFB", line: "#D9D4F0", ink: "#1C1533", muted: "#5D5776", faint: "#8A84A6",
   green: "#16A34A", greenDeep: "#15803D", red: "#DC2626", redDeep: "#B91C1C", paper: "#fff" };
 
@@ -226,7 +230,8 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
         {h(3, "Back your side", step === 4 ? "done" : step === 3 ? "now" : "later")}
         {step === 3 && (
           <div data-testid="start-step-stake" style={{ marginLeft: 34 }}>
-            {pct != null && <p style={{ margin: "0 0 10px", fontSize: 13, color: P.muted }}>Right now {pct} % of the stake backs this claim and {100 - pct} % challenges it.</p>}
+            {pct != null && <p style={{ margin: "0 0 6px", fontSize: 13, color: P.muted }}>Right now {pct} % of the stake backs this claim and {100 - pct} % challenges it.</p>}
+            <p data-testid="start-rule" style={{ margin: "0 0 12px", fontSize: 14, color: P.ink, lineHeight: 1.45 }}>{THE_RULE}</p>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <button type="button" data-testid="start-side-support" style={sideBtn("support")} onClick={() => setSide("support")}>Support</button>
               <button type="button" data-testid="start-side-challenge" style={sideBtn("challenge")} onClick={() => setSide("challenge")}>Challenge</button>
@@ -240,7 +245,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
               disabled={busy === "stake" || (redeemed != null && balance != null && balance <= 0)} onClick={stake}>
               {busy === "stake" ? "Signing…" : `Stake ${amount || "0"} VSP to ${side} it`}
             </button>
-            <p style={{ margin: "10px 0 0", fontSize: 12, color: P.faint, lineHeight: 1.45 }}>One signature with your wallet; the relay pays the gas and takes a small VSP fee, shown before you confirm. You can change or withdraw your stake at any time.</p>
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: P.faint, lineHeight: 1.45 }}>One signature with your wallet; the relay pays the gas and takes a small VSP fee, shown before you confirm. {RULE_FINE_PRINT}</p>
           </div>
         )}
         {step === 4 && (
