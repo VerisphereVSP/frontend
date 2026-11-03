@@ -5,6 +5,7 @@ import { useCreateClaim, useStake } from "@verisphere/protocol";
 import { C, n, fmt, vc, vb, injectCSS } from "./theme";
 import type { Sentence, Article } from "./types";
 import B from "./MiniButton";
+import { standaloneNote, mayCreate, type CleanupReply } from "./standalone";  // patch_fe_claim_resolve
 import PlusButton from "./PlusButton";
 import StakeInput from "./StakeInput";
 import { fireTxProgress } from "./TxProgress";
@@ -32,10 +33,7 @@ export default function ArticleView({
   const [editPhase, setEditPhase] = useState<
     "edit" | "cleanup" | "confirm" | "creating" | "staking"
   >("edit");
-  const [editSug, setEditSug] = useState<{
-    original: string;
-    suggested: string;
-  } | null>(null);
+  const [editSug, setEditSug] = useState<CleanupReply | null>(null);  // patch_fe_claim_resolve
   const [stakeAmt, setStakeAmt] = useState("1");
   const [confirmChoice, setConfirmChoice] = useState<"suggested" | "original">("suggested");
   const editRef = useRef<HTMLTextAreaElement>(null);
@@ -111,7 +109,8 @@ export default function ArticleView({
       const d = await fetch(`${API}/article/sentence/cleanup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: editText.trim(), topic: article.title }),
+        // patch_fe_claim_resolve: the neighbouring sentences let the server resolve "it" / "the market" from the article
+        body: JSON.stringify({ text: editText.trim(), topic: article.title, paragraph: (() => { const i = allSent.findIndex((s) => s.sentence_id === editId); return allSent.slice(Math.max(0, i - 2), i + 3).map((s) => s.text).join(" "); })() }),
       }).then((r) => r.json());
       if (
         d.suggested &&
@@ -631,6 +630,10 @@ export default function ArticleView({
                                 <b>Create claim:</b> {editSug.suggested}
                               </div>
                             )}
+                            {(() => { const n = standaloneNote(editSug); return n.kind ? (
+                              <div data-testid="standalone-note" style={{ fontSize: 11, marginBottom: 6, padding: "4px 6px", borderRadius: 4,
+                                background: n.kind === "needs" ? "#FEF2F2" : "#EDEAFB", color: n.kind === "needs" ? "#B91C1C" : "#37299B" }}>{n.text}</div>
+                            ) : null; })()}
                             <div
                               style={{
                                 display: "flex",
@@ -655,7 +658,7 @@ export default function ArticleView({
                             <div style={{ display: "flex", gap: 5 }}>
                               <B
                                 onClick={() => doCommit(confirmChoice === "original" ? editSug!.original : editSug!.suggested)}
-                                dis={busy}
+                                dis={busy || !mayCreate(editSug, confirmChoice)}
                               >
                                 {statusText || "Create & stake"}
                               </B>
