@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useCreateClaim, useStake, fetchBalance, POST_REGISTRY_MAX_CLAIM_LENGTH } from "@verisphere/protocol";
+import { standaloneNote, mayCreate, type CleanupReply } from "./standalone";  // patch_fe_claim_resolve
 import { C } from "./theme";
 import B from "./MiniButton";
 import { friendlyError, fireToast } from "../../utils/errorMessages";
@@ -30,10 +31,7 @@ export default function PlusBtn({
   const [phase, setPhase] = useState<
     "input" | "cleanup" | "confirm" | "creating" | "staking"
   >("input");
-  const [sug, setSug] = useState<{
-    original: string;
-    suggested: string;
-  } | null>(null);
+  const [sug, setSug] = useState<CleanupReply | null>(null);  // patch_fe_claim_resolve: carries needs_context / changes
   const [error, setError] = useState<string | null>(null);
   const [hasBalance, setHasBalance] = useState(false);
   const { isConnected, address } = useAccount();
@@ -319,6 +317,15 @@ export default function PlusBtn({
           ) : (
             <div style={{ fontSize: 12, marginBottom: 5 }}><b>Create claim:</b> {sug.suggested}</div>
           )}
+          {(() => { const n = standaloneNote(sug); return n.kind ? (
+            <div data-testid="standalone-note" style={{ fontSize: 11, marginBottom: 6, padding: "4px 6px", borderRadius: 4,
+              background: n.kind === "needs" ? "#FEF2F2" : "#EDEAFB", color: n.kind === "needs" ? "#B91C1C" : "#37299B" }}>{n.text}</div>
+          ) : null; })()}
+          {sug.needs_context && (
+            <div style={{ marginBottom: 6 }}>
+              <B onClick={() => { setTxt(sug.suggested); setSug(null); setPhase("input"); }} ghost>Edit the claim</B>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 4 }}>
             <span style={{ fontSize: 11, color: C.gray }}>Initial stake:</span>
             <StakeInput value={stakeAmt} onChange={setStakeAmt}
@@ -326,7 +333,7 @@ export default function PlusBtn({
             <span style={{ fontSize: 10, color: C.muted }}>VSP support</span>
           </div>
           <div style={{ display: "flex", gap: 5 }}>
-            <B onClick={() => commit(confirmChoice === "original" ? sug.original : sug.suggested)} dis={busy}>
+            <B onClick={() => commit(confirmChoice === "original" ? sug.original : sug.suggested)} dis={busy || !mayCreate(sug, confirmChoice)}>
               {statusText || "Create & stake"}
             </B>
             <B onClick={() => { setSug(null); setPhase("input"); }} ghost>Cancel</B>
