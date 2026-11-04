@@ -13,9 +13,10 @@ import Portfolio from "./components/Portfolio";
 import StartOverlay from "./components/StartOverlay";  // patch_fe_start
 import { startParams } from "./components/start-params";  // patch_fe_start
 import InstallExtension from "./components/InstallExtension";  // patch_fe_install_ext
+import ActivityView, { useActivityCount } from "./components/ActivityView";  // patch_fe_activity
 
 const API = import.meta.env.VITE_API_BASE || "/api";
-type View = "explore" | "claims" | "portfolio" | "transactions";  /* patch_bundle04_5_p3_tx_nav */
+type View = "explore" | "claims" | "portfolio" | "transactions" | "activity";  /* patch_bundle04_5_p3_tx_nav; patch_fe_activity */
 type Suggestion = { key: string; title: string; source: string };
 
 /* ── Landing Hero (shown when no topic is selected) ── */
@@ -389,7 +390,7 @@ function LandingHero({ onSubmit }: { onSubmit: (q: string) => void }) {
 
 /* ── Main App ── */
 export default function App() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { unreadCount, markAllRead } = useNotifications();  /* patch_bundle04_5_p3_tx_nav */
   const navigate = useNavigate();
   const location = useLocation();
@@ -400,12 +401,14 @@ export default function App() {
   const view = location.pathname === "/claims" ? "claims"
     : location.pathname === "/portfolio" ? "portfolio"
     : location.pathname === "/transactions" ? "transactions"
+    : location.pathname === "/activity" ? "activity"  /* patch_fe_activity */
     : "explore";
   const setView = (v: string) => {
     if (v === "explore") navigate("/");
     else if (v === "claims") navigate("/claims");
     else if (v === "portfolio") navigate("/portfolio");
     else if (v === "transactions") navigate("/transactions");  /* patch_bundle04_5_p3_tx_setview */
+    else if (v === "activity") navigate("/activity");  /* patch_fe_activity */
   };
 
 
@@ -413,6 +416,8 @@ export default function App() {
   useEffect(() => {
     if (view === "transactions") markAllRead();
   }, [view, markAllRead]);
+  // patch_fe_activity: what other wallets did on the claims you hold — the badge counts claims with news since you last looked
+  const activityCount = useActivityCount(isConnected ? address : undefined, view === "activity");
   const [input, setInput] = useState("");
   const topicParam = location.pathname.startsWith("/topic/")
     ? decodeURIComponent(location.pathname.slice(7))
@@ -575,6 +580,7 @@ export default function App() {
               {navBtn("Explore", "explore")}
               {navBtn("Claims", "claims")}
               {navBtn("Positions", "portfolio", true)}  {/* patch_bundle09_p1a_nav_portfolio_age_time */}
+              {isConnected && navBtn("Activity", "activity", true, activityCount)}  {/* patch_fe_activity */}
               {isConnected && navBtn("Transactions", "transactions", true, unreadCount)}  {/* patch_bundle04_5_p3_tx_nav */}
             </nav>
           </div>
@@ -739,6 +745,7 @@ export default function App() {
           {/* Claims explorer */}
           {view === "claims" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><ClaimsExplorer /></div>}
           {view === "transactions" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><TransactionsView /></div>}  {/* patch_bundle04_5_p3_tx_render */}
+          {view === "activity" && <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}><ActivityView /></div>}  {/* patch_fe_activity */}
 
           {/* Portfolio */}
           {view === "portfolio" && (<div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}>
