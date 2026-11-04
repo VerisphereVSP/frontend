@@ -17,8 +17,8 @@ import InstallExtension from "./InstallExtension";  // patch_fe_install_ext
 const API = import.meta.env.VITE_API_BASE || "/api";
 
 // patch_payoff — the rule, in the same words as the share page and the guide (Lavey, 11-01)
-export const THE_RULE = "From tomorrow's settlement, your stake gains VSP every day the score stays on your side — and loses it every day it doesn't. The earlier you took the side, the better your rate. You can change or withdraw at any time.";
-export const RULE_FINE_PRINT = "At a score of 0 nobody gains or loses; rates are bounded.";
+export const THE_RULE = "The score is a credibility signal, not a verdict and not a bet: it is what people are willing to stake behind each side. Your position earns or loses VSP over time by the claim's score — from the protocol, never from the other side. You can change or withdraw at any time.";
+export const RULE_FINE_PRINT = "At a score of 0 nobody earns or loses; rates are bounded; nothing is ever resolved.";
 
 const P = { violet: "#5B4BC4", violetDeep: "#37299B", tint: "#EDEAFB", line: "#D9D4F0", ink: "#1C1533", muted: "#5D5776", faint: "#8A84A6",
   green: "#16A34A", greenDeep: "#15803D", red: "#DC2626", redDeep: "#B91C1C", paper: "#fff" };
@@ -251,7 +251,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
         )}
         {step === 4 && (
           <div data-testid="start-done" style={{ marginLeft: 34 }}>
-            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.ink, lineHeight: 1.45 }}>You're in: <b>{amount} VSP {side === "support" ? "supporting" : "challenging"}</b> this claim. The score moves as others take sides; stakes settle once a day.</p>
+            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.ink, lineHeight: 1.45 }}>You're in: <b>{amount} VSP {side === "support" ? "supporting" : "challenging"}</b> this claim. The score moves as others stake; positions are updated once a day.</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" data-testid="start-see-claim" style={primary} onClick={close}>See the claim</button>
               <InstallExtension where="start" />

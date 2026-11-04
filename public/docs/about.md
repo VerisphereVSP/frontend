@@ -4,6 +4,18 @@
 
 Verisphere is a technology company building economic infrastructure for factual accountability. We believe that attaching real economic cost to factual assertions — and real economic reward to being right — creates better incentives for truth than likes, votes, or editorial consensus.
 
+## What this is — and what it isn't <!-- patch_not_a_bet -->
+
+Verisphere exists to make it possible to tell, at a glance, how much a claim can be trusted: not by votes or likes, which are free to fake, but by what people are willing to back with their own tokens. That is the whole purpose; the score is a credibility signal for an open epistemology, and everything else is in service of it.
+
+Backing a claim is not a bet, and this is not a market on outcomes. Three facts about the mechanics make the difference:
+
+- **Nothing is resolved.** There is no event, no deadline, no judge. A claim's score is simply the stake behind each side right now, and it keeps moving as people stake and withdraw.
+- **It is not zero-sum.** Everyone who backs a claim that holds up earns while it holds up; they are not competing with each other for a pot. When people cooperate — backing what is well supported, challenging what isn't, linking evidence — all of them can gain at the same time.
+- **Nobody's gain comes from anybody's loss.** A position earns or loses VSP at a rate set by the claim's score, paid by and to the protocol, not transferred from the other side. Challengers of a false claim don't take the supporters' stake; the supporters' positions lose value on their own, and the protocol's bounds cap every rate.
+
+So the incentive runs the other way from a wager: the way to gain is to put stake behind what is true and against what is false, early, and to bring evidence. That is what keeps the score honest.
+
 ## What We Build
 
 **The VeriSphere Protocol** is an open-source, permissionless set of smart contracts on the Avalanche blockchain. Anyone can publish a factual claim, stake tokens to support or challenge it, and link claims together as evidence. The protocol computes a Verity Score for every claim based on the economic weight behind it.

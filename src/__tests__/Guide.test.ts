@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const guide = readFileSync(resolve(process.cwd(), "public/docs/guide.md"), "utf8");
-const heads = guide.split("\n").filter((l) => /^#{1,4} /.test(l));
+const heads = guide.split("\n").filter((l) => /^#{1,4} /.test(l)).map((l) => l.replace(/\s*<!--.*?-->\s*$/, ""));
 
 describe("How to Play (v3)", () => {
   it("opens with the rule and the quick way in, then MetaMask as the alternative", () => {
-    expect(guide).toContain("Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most.");
-    const order = ["## Part 1 — Get in", "### The quick way: a passkey wallet (recommended)", "### Arriving from a share link", "### If you already use MetaMask", "#### Step 1. Install MetaMask", "### Buying VSP", "## Part 2 — Your first actions", "### Share a claim — and put VSP on the table", "### The extension", "## Quick reference", "## Troubleshooting"];
+    expect(guide).toContain("Nobody's gain comes from anybody's loss.");
+    const order = ["## What this is — and what it isn't", "## Part 1 — Get in", "### The quick way: a passkey wallet (recommended)", "### Arriving from a share link", "### If you already use MetaMask", "#### Step 1. Install MetaMask", "### Buying VSP", "## Part 2 — Your first actions", "### Share a claim — and put VSP on the table", "### The extension", "## Quick reference", "## Troubleshooting"];
     let last = -1;
     for (const h of order) { const i = heads.indexOf(h); expect(i, h).toBeGreaterThan(last); last = i; }
   });
@@ -21,5 +21,17 @@ describe("How to Play (v3)", () => {
   });
   it("keeps the vocabulary rule", () => {
     for (const banned of [/invest/i, /appreciat/i, /\breturns?\b/i, /profit/i]) expect(guide).not.toMatch(banned);
+  });
+});
+
+describe("not a bet (patch_not_a_bet)", () => {
+  it("the three facts appear in the guide and in About, and the wordmark links to the landing page", () => {
+    const about = readFileSync(resolve(process.cwd(), "public/docs/about.md"), "utf8");
+    for (const doc of [guide, about]) {
+      for (const s of ["**Nothing is resolved.**", "**It is not zero-sum.**", "**Nobody's gain comes from anybody's loss.**", "not a bet, and this is not a market on outcomes"]) expect(doc).toContain(s);
+    }
+    expect(guide).not.toMatch(/the other side loses it|Right and early gains the most|is an opportunity/);
+    const app = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    expect(app).toContain('<a href="https://verisphere.co" data-testid="brand-link"');
   });
 });

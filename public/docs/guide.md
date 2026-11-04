@@ -2,9 +2,21 @@
 
 <!-- patch_guide_v2 --><!-- patch_fe_gas_fee --><!-- patch_fe_docs_avax --><!-- patch_fe_docs_ext_phone --><!-- patch_guide_v3: passkey, invitations, sharing, extension -->
 
-Verisphere is a truth-staking protocol: you back factual claims with VSP tokens. Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most. What counts as credible is decided by what people are willing to stake, not by votes or likes. <!-- patch_payoff -->
+Verisphere is a truth-staking protocol: you back factual claims with VSP tokens, and the stake behind each side is the claim's score — a credibility signal decided by what people are willing to stake, not by votes or likes. Positions earn or lose VSP over time at a rate set by the claim's score — paid by the protocol, never by the other side — so backing what holds up pays and backing what doesn't costs. <!-- patch_payoff / patch_not_a_bet -->
 
 This guide takes you from nothing to your first stake. The quickest way in takes **about a minute**: a passkey wallet made by the app, and VSP from a friend's invitation link. Buying VSP yourself through an exchange takes longer the first time — most of it waiting for the exchange — and every action after that takes seconds.
+
+## What this is — and what it isn't <!-- patch_not_a_bet -->
+
+Verisphere exists to make it possible to tell, at a glance, how much a claim can be trusted: not by votes or likes, which are free to fake, but by what people are willing to back with their own tokens. That is the whole purpose; the score is a credibility signal for an open epistemology, and everything else is in service of it.
+
+Backing a claim is not a bet, and this is not a market on outcomes. Three facts about the mechanics make the difference:
+
+- **Nothing is resolved.** There is no event, no deadline, no judge. A claim's score is simply the stake behind each side right now, and it keeps moving as people stake and withdraw.
+- **It is not zero-sum.** Everyone who backs a claim that holds up earns while it holds up; they are not competing with each other for a pot. When people cooperate — backing what is well supported, challenging what isn't, linking evidence — all of them can gain at the same time.
+- **Nobody's gain comes from anybody's loss.** A position earns or loses VSP at a rate set by the claim's score, paid by and to the protocol, not transferred from the other side. Challengers of a false claim don't take the supporters' stake; the supporters' positions lose value on their own, and the protocol's bounds cap every rate.
+
+So the incentive runs the other way from a wager: the way to gain is to put stake behind what is true and against what is false, early, and to bring evidence. That is what keeps the score honest.
 
 **What you will need**
 
@@ -196,8 +208,8 @@ Keep a little AVAX in the wallet for gas; if MetaMask says "insufficient funds f
 
 Each claim shows a score between −100 % and +100 %:
 
-- **VS > 0** — more support than challenge. Supporters earn, challengers lose.
-- **VS < 0** — more challenge than support. Challengers earn, supporters lose.
+- **VS > 0** — more support than challenge. Supporting positions earn, challenging positions lose value.
+- **VS < 0** — more challenge than support. Challenging positions earn, supporting positions lose value.
 - **VS = 0** — contested or inactive. Nobody earns or loses.
 
 The score that pays is the *effective* score: the claim's own stake **plus** its linked evidence, counted as of the last settlement.
@@ -212,7 +224,7 @@ If an action answers *"This post is being settled by the network — please retr
 
 ### What you earn
 
-Your rate depends on four things: how strong the score is (0 % at VS = 0, more as |VS| grows), how large the post's total stake is relative to the system reference, your place in the queue (earlier stakers on a side earn more), and the protocol's rate bounds (never above 100 % per year). If your side matches the score's sign you earn at that rate; the other side loses at it. **Positions** shows the live rate and the factors behind it for every stake you hold.
+Your rate depends on four things: how strong the score is (0 % at VS = 0, more as |VS| grows), how large the post's total stake is relative to the system reference, your place in the queue (earlier stakers on a side earn more), and the protocol's rate bounds (never above 100 % per year). If your side matches the score's sign you earn at that rate; the other side loses at it. Gains and losses are per position, paid by and to the protocol: nothing moves between sides, and no event is ever "resolved." **Positions** shows the live rate and the factors behind it for every stake you hold.
 
 ### Rules worth knowing
 
@@ -225,7 +237,7 @@ Your rate depends on four things: how strong the score is (0 % at VS = 0, more a
 ## Strategy
 
 - **Back the truth early.** The first stakers on a true claim get the best queue position and the best rate.
-- **Challenge what's wrong.** A false claim with support is an opportunity: stake challenge, and if others follow, the score turns negative.
+- **Challenge what's wrong.** A false claim with support needs challenging: stake challenge, and if others follow, the score turns negative.
 - **Build evidence.** A credible challenging link can flip a crowded claim's score, and a link's stake pool is smaller and less competitive.
 - **Defend.** If a claim you support is challenged, add support, challenge the challenger's claim, or challenge the link itself.
 - **Start small** — 1 VSP — until the daily settlement and the presence bar make sense to you.

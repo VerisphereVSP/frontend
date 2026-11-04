@@ -159,11 +159,12 @@ describe("the rule (patch_payoff)", () => {
     wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
     render(<StartOverlay postId={142} side="support" code={null} onClose={vi.fn()} />);
     await waitFor(() => screen.getByTestId("start-step-stake"));
-    expect(screen.getByTestId("start-rule").textContent).toBe("From tomorrow's settlement, your stake gains VSP every day the score stays on your side — and loses it every day it doesn't. The earlier you took the side, the better your rate. You can change or withdraw at any time.");
-    expect(screen.getByTestId("start-step-stake").textContent).toContain("At a score of 0 nobody gains or loses; rates are bounded.");
+    expect(screen.getByTestId("start-rule").textContent).toBe("The score is a credibility signal, not a verdict and not a bet: it is what people are willing to stake behind each side. Your position earns or loses VSP over time by the claim's score — from the protocol, never from the other side. You can change or withdraw at any time.");
+    expect(screen.getByTestId("start-step-stake").textContent).toContain("At a score of 0 nobody earns or loses; rates are bounded; nothing is ever resolved.");
     for (const banned of [/price/i, /invest/i, /return/i, /profit/i, /\btrue\b/i, /\bfalse\b/i]) expect(screen.getByTestId("start-overlay").textContent).not.toMatch(banned);
     const guide = readFileSync(resolve(process.cwd(), "public/docs/guide.md"), "utf8");
-    expect(guide).toContain("Claims settle every day: the side the score favours gains VSP, the other side loses it. Right and early gains the most.");
+    expect(guide).toContain("paid by the protocol, never by the other side");
+    expect(guide).toContain("## What this is — and what it isn't");
     expect(guide).not.toContain("If the claim holds up, you earn; if it doesn't, you lose.");
   });
 });
