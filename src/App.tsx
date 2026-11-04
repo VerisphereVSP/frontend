@@ -567,16 +567,9 @@ export default function App() {
       <header className="top-bar" style={{ flexShrink: 0 }}>
         <div className="top-bar-container">
           <div className="brand-nav">{/* patch_fe_mobile_shell: wraps on phones instead of widening the viewport */}
-            <h2
-              className="logo"
-              onClick={() => {
-                setView("explore");
-                setTopic(null);
-                setInput("");
-              }}
-              style={{ cursor: "pointer", margin: 0 }}
-            >
-              Verisphere
+            {/* patch_fe_brand_link: the wordmark is the only way back to the landing page (verisphere.co) from the app */}
+            <h2 className="logo" style={{ margin: 0 }}>
+              <a href="https://verisphere.co" data-testid="brand-link" title="Verisphere home" style={{ color: "inherit", textDecoration: "none" }}>Verisphere</a>
             </h2>
             <nav className="top-nav">
               {navBtn("Explore", "explore")}
