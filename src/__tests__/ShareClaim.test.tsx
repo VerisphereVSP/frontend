@@ -126,6 +126,16 @@ describe("ShareClaim", () => {
     await act(async () => { screen.getByTestId("share-copy-text").click(); });
     expect(written[0]).toContain("https://app.verisphere.co/c/142?code=VSP-AAAA-BBBB-CCCC");
     expect(written[0]).toContain("I've put 2 VSP on the table for you");
+    // patch_fe_invite_detach: Detach drops the code from the share text (never the escrow) and survives a remount
+    await act(async () => { screen.getByTestId("share-invite-detach").click(); });
+    expect(screen.queryByTestId("share-invite-attached")).toBeNull();
+    expect((screen.getByLabelText("Share link") as HTMLInputElement).value).toBe("https://app.verisphere.co/c/142");
+    expect(screen.getByTestId("share-invite-open")).toBeTruthy();
+    cleanup();
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => screen.getByTestId("share-invite-open"));
+    expect(screen.queryByTestId("share-invite-attached")).toBeNull();
     wagmiState.isConnected = false; wagmiState.address = undefined;
   });
 

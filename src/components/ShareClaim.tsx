@@ -327,7 +327,10 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
                     <div data-testid="share-invite-attached" style={{ background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 8, color: "#37299B" }}>
                       <b>{invite.amount_vsp} VSP attached</b> for claim #{postId} · code <code>{invite.code}</code>
                       <button type="button" style={{ ...btn, height: 22, marginLeft: 6, fontSize: 10 }} onClick={async () => { if (await copyText(invite.code)) flash("Code copied", "code"); }}>{label("code", "Copy code")}</button>
-                      <div style={{ marginTop: 4, color: "#5D5776" }}>The link and text now carry it. Shown once; the VSP returns to you if unused by the expiry. Your open invitations are listed under Positions.</div>
+                      {/* patch_fe_invite_detach: the attachment stays until the sponsor says so — a refresh used to drop it silently; detaching never touches the escrow */}
+                      <button type="button" data-testid="share-invite-detach" style={{ ...btn, height: 22, marginLeft: 6, fontSize: 10 }} title="Remove the code from this share text. The VSP stays set aside under Positions until you revoke it or it expires."
+                        onClick={() => { issuedByPost.delete(postId); reopenAfterRemount.delete(postId); setInvite(null); }}>Detach</button>
+                      <div style={{ marginTop: 4, color: "#5D5776" }}>The link and text carry it until you detach it. The VSP returns to you if unused by the expiry. Your open invitations are listed under Positions.</div>
                     </div>
                   ) : inviteOpen ? (
                     <InviteForm compact postId={postId} onIssued={async (inv) => {
