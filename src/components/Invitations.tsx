@@ -9,8 +9,9 @@ import { useContracts } from "../contracts";
 // No import from ./claims-shared here: this module sits in the claims-shared → ShareClaim → Invitations cycle, and a
 // top-level read of its `S` crashed the app (TDZ) on 10-30. Same palette, as literals.
 const S = { text: "#2d3748", textMuted: "#718096", textFaint: "#a0aec0", border: "#e2e8f0", borderLight: "#edf2f7", green: "#38a169", red: "#e53e3e" } as const;
+import { readInviteNotes, setInviteNote, readInviteCodes, rememberInviteCode, forgetInviteCode, inviteLink } from "../wallet/inviteNotes";  // patch_fe_invite_notes, patch_fe_invite_reshare
 import {
-  daysLeft, fetchInviteConfig, issueInvite, listInvites, peekInvite, redeemInvite, revokeInvite,
+  daysLeft, fetchInviteConfig, issueInvite, listInvites, peekInvite, redeemInvite, revokeInvite, withInvite,
   type InviteConfig, type InviteIssued, type InvitePeek, type InviteRow,
 } from "../wallet/invites";
 
@@ -18,6 +19,18 @@ const VIOLET = "#5B4BC4";
 const btn: React.CSSProperties = { height: 30, padding: "0 10px", borderRadius: 7, border: `1px solid ${S.border}`, background: "#fff", color: S.text, fontSize: 11, fontWeight: 600, cursor: "pointer" };
 const primary: React.CSSProperties = { ...btn, background: VIOLET, color: "#fff", borderColor: VIOLET };
 const input: React.CSSProperties = { height: 30, padding: "0 8px", borderRadius: 7, border: `1px solid ${S.border}`, fontSize: 12, width: 72, boxSizing: "border-box" };
+
+const API = import.meta.env.VITE_API_BASE || "/api";  // patch_fe_invite_balance
+
+/** patch_fe_invite_balance: the wallet's VSP, or null when it cannot be read (the app then decides). */
+async function vspBalance(address: string): Promise<number | null> {
+  try {
+    const r = await fetch(`${API}/token/balance?address=${address}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.balance != null ? Number(BigInt(d.balance)) / 1e18 : null;
+  } catch { return null; }
+}
 
 const toast = (message: string, type: "error" | "info" | "success" = "info") =>
   window.dispatchEvent(new CustomEvent("verisphere:toast", { detail: { message, type } }));
@@ -31,6 +44,7 @@ export function InviteForm({ onIssued, compact = false, postId = null }: { onIss
   const [cfg, setCfg] = useState<InviteConfig | null>(null);
   const [amount, setAmount] = useState("2");
   const [days, setDays] = useState("30");
+  const [note, setNote] = useState("");  // patch_fe_invite_notes: private, this browser only
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -47,11 +61,20 @@ export function InviteForm({ onIssued, compact = false, postId = null }: { onIss
     if (!walletClient || !publicClient || !contracts?.VSPToken) { setErr("Wallet not ready."); return; }
     setBusy(true);
     try {
+      // patch_fe_invite_balance: say it before asking for a signature (the app refuses too, before any gas is spent)
+      const held = await vspBalance(address);
+      if (held != null && held < a) {
+        const m = `You hold ${held.toLocaleString("en-US", { maximumFractionDigits: 2 })} VSP; the invitation needs ${a}.`;
+        setErr(m); toast(m, "error"); return;
+      }
       const inv = await issueInvite({ walletClient, publicClient, chainId, token: contracts.VSPToken as `0x${string}`, amountVsp: amount, expiresDays: d, config: cfg, postId });
+      if (note.trim()) setInviteNote(address, inv.code_hash, note);  // patch_fe_invite_notes
+      rememberInviteCode(address, inv.code_hash, inv.code);  // patch_fe_invite_reshare: this browser can share it again
       toast(`${inv.amount_vsp} VSP escrowed from your wallet for this invitation.`, "success");
       onIssued(inv);
     } catch (e: any) {
-      setErr(e?.shortMessage || e?.message || "Could not create the invitation.");
+      const m = e?.shortMessage || e?.message || "Could not create the invitation.";
+      setErr(m); toast(m, "error");  // patch_fe_invite_balance: a toast survives the re-render that the list refresh causes
     } finally { setBusy(false); }
   };
 
@@ -61,6 +84,7 @@ export function InviteForm({ onIssued, compact = false, postId = null }: { onIss
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
         <label>Amount <input data-testid="invite-amount" style={input} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /> VSP</label>
         <label>· Expires in <input data-testid="invite-days" style={{ ...input, width: 56 }} value={days} onChange={(e) => setDays(e.target.value)} inputMode="numeric" /> days</label>
+        <label title="A private note for you — who this is for. Stays in this browser; never sent.">· For <input data-testid="invite-note" style={{ ...input, width: 96, textAlign: "left" }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="private note" maxLength={80} /></label>
         <button type="button" data-testid="invite-submit" style={primary} disabled={busy} onClick={submit}>{busy ? "Signing…" : "Create invitation"}</button>
       </div>
       {cfg && <div style={{ color: S.textFaint, fontSize: 10 }}>{cfg.min_vsp}–{cfg.max_vsp} VSP, up to {cfg.max_days} days, {cfg.max_outstanding} open at a time. One signature; no gas.</div>}
@@ -79,13 +103,28 @@ export function InvitesList() {
   const [busy, setBusy] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [notes, setNotes] = useState<Record<string, string>>({});  // patch_fe_invite_notes
+  const [codes, setCodes] = useState<Record<string, string>>({});  // patch_fe_invite_reshare
+  const [editing, setEditing] = useState<string | null>(null);
 
   const load = () => { if (address) listInvites(address).then((d) => { setRows(d.invites); setOpen(d.open); setMax(d.max_outstanding); }).catch(() => setRows([])); };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [address]);
+  useEffect(() => { load(); if (address) { setNotes(readInviteNotes(address)); setCodes(readInviteCodes(address)); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [address]);
 
   if (!isConnected || !address) return null;
   const copy = async (t: string) => { try { await navigator.clipboard.writeText(t); toast("Copied.", "success"); } catch { toast("Could not copy.", "error"); } };
   const goTo = (postId: number) => window.dispatchEvent(new CustomEvent("verisphere:navigate", { detail: { view: "claims", postId } }));
+  // patch_fe_invite_reshare: the same text the Share menu produced — the claim's snapshot with the invitation line — or,
+  // for an invitation not tied to a claim, the Start link alone
+  const reshare = async (r: InviteRow) => {
+    const code = codes[r.code_hash];
+    if (!code) return;
+    const link = inviteLink(window.location.origin, code, r.post_id);
+    if (r.post_id == null) { await copy(link); return; }
+    try {
+      const snap = await fetch(`${API}/claims/${r.post_id}/snapshot`).then((x) => x.ok ? x.json() : Promise.reject(new Error(`snapshot ${x.status}`)));
+      await copy(withInvite(snap.share_url, snap.share_text, code, r.amount_vsp).text);
+    } catch { await copy(link); }
+  };
   const visible = rows ? (showAll ? rows : rows.filter((r) => r.status === "open")) : [];
   const closedCount = rows ? rows.filter((r) => r.status !== "open").length : 0;
 
@@ -99,7 +138,7 @@ export function InvitesList() {
       </div>
       {showForm && (
         <div style={{ marginTop: 8 }}>
-          <InviteForm onIssued={(inv) => { setIssued(inv); load(); }} />
+          <InviteForm onIssued={(inv) => { setIssued(inv); load(); if (address) { setNotes(readInviteNotes(address)); setCodes(readInviteCodes(address)); } }} />
           {issued && (
             <div data-testid="invite-issued" style={{ marginTop: 8, background: "#EDEAFB", border: "1px solid #D9D4F0", borderRadius: 8, padding: 10, fontSize: 12 }}>
               Code <code style={{ fontWeight: 700, fontSize: 13 }}>{issued.code}</code> · {issued.amount_vsp} VSP · expires in {daysLeft(issued.expires_at)} days
@@ -115,7 +154,7 @@ export function InvitesList() {
       {rows && rows.length > 0 && (
         <>
           <table style={{ width: "100%", marginTop: 6, fontSize: 11, borderCollapse: "collapse" }}>
-            <thead><tr style={{ color: S.textFaint, textAlign: "left" }}><th style={{ padding: "2px 6px", fontWeight: 600 }}>Amount</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>For</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>State</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>Expires</th><th></th></tr></thead>
+            <thead><tr style={{ color: S.textFaint, textAlign: "left" }}><th style={{ padding: "2px 6px", fontWeight: 600 }}>Amount</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>For</th><th style={{ padding: "2px 6px", fontWeight: 600 }} title="Your private note — this browser only, never sent">Note</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>State</th><th style={{ padding: "2px 6px", fontWeight: 600 }}>Expires</th><th></th></tr></thead>
             <tbody>
               {visible.map((r) => (
                 <tr key={r.id} data-testid="invite-row" style={{ borderTop: `1px solid ${S.borderLight}` }}>
@@ -125,6 +164,16 @@ export function InvitesList() {
                       ? <a href={`/claims?post=${r.post_id}`} onClick={(e) => { e.preventDefault(); goTo(r.post_id!); }} style={{ color: VIOLET }}>claim #{r.post_id}</a>
                       : <span style={{ color: S.textMuted }}>any claim</span>}
                   </td>
+                  <td style={{ padding: "4px 6px" }} data-testid="invite-note-cell">
+                    {editing === r.code_hash ? (
+                      <input autoFocus data-testid="invite-note-edit" style={{ ...input, width: 110, textAlign: "left" }} defaultValue={notes[r.code_hash] ?? ""} maxLength={80}
+                        onBlur={(e) => { if (address) setNotes(setInviteNote(address, r.code_hash, e.target.value)); setEditing(null); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditing(null); }} />
+                    ) : (
+                      <button type="button" data-testid="invite-note" title="Private note — this browser only, never sent" onClick={() => setEditing(r.code_hash)}
+                        style={{ border: "none", background: "none", padding: 0, font: "inherit", cursor: "text", color: notes[r.code_hash] ? S.text : S.textFaint }}>{notes[r.code_hash] || "add note"}</button>
+                    )}
+                  </td>
                   <td style={{ padding: "4px 6px" }}>
                     {r.status === "open" ? <span style={{ color: VIOLET, fontWeight: 600 }}>open</span>
                       : r.status === "redeemed" ? <span style={{ color: S.green }}>redeemed by {r.redeemed_by?.slice(0, 6)}…{r.redeemed_by?.slice(-4)}</span>
@@ -132,12 +181,15 @@ export function InvitesList() {
                   </td>
                   <td style={{ padding: "4px 6px", color: S.textMuted }}>{r.status === "open" ? `in ${daysLeft(r.expires_at)} d` : new Date(r.closed_at ?? r.redeemed_at ?? r.expires_at).toLocaleDateString()}</td>
                   <td style={{ padding: "2px 6px", textAlign: "right" }}>
+                    {r.status === "open" && (codes[r.code_hash]
+                      ? <button type="button" data-testid="invite-reshare" style={{ ...btn, height: 24, marginRight: 6, color: VIOLET, borderColor: "#D9D4F0" }} title="Copy the snapshot with this invitation again (the code is kept in this browser)" onClick={() => reshare(r)}>Reshare</button>
+                      : <span data-testid="invite-no-code" title="The code was shown once, in the browser that created it; this browser does not have it." style={{ color: S.textFaint, marginRight: 6 }}>code not here</span>)}
                     {r.status === "open" && (
                       <button type="button" data-testid="invite-revoke" style={{ ...btn, height: 24, color: "#B91C1C", borderColor: "#FECACA" }} disabled={busy === r.code_hash}
                         onClick={async () => {
                           if (!walletClient) return;
                           setBusy(r.code_hash);
-                          try { const d = await revokeInvite(walletClient, r.code_hash); toast(`${d.amount_vsp} VSP returned to your wallet.`, "success"); load(); }
+                          try { const d = await revokeInvite(walletClient, r.code_hash); toast(`${d.amount_vsp} VSP returned to your wallet.`, "success"); if (address) { forgetInviteCode(address, r.code_hash); setCodes(readInviteCodes(address)); } load(); }
                           catch (e: any) { toast(e?.shortMessage || e?.message || "Could not revoke.", "error"); }
                           finally { setBusy(null); }
                         }}>Revoke</button>

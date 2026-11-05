@@ -295,7 +295,7 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
       {loading && <div style={{ padding: 20, color: S.textMuted }}>Loading…</div>}
       {error && <div style={{ padding: 20, color: S.red }}>{error}</div>}
       {!loading && !error && (
-        <div style={{ flex: 1, overflowY: "auto", border: `1px solid ${S.border}`, borderRadius: 6, background: "#fff" }}>
+        <div style={{ flex: 1, minHeight: 180, overflowY: "auto", border: `1px solid ${S.border}`, borderRadius: 6, background: "#fff" }}>  {/* patch_fe_positions_split: the positions keep the height */}
           {/* Header row */}
           <div style={{
             display: "grid", gridTemplateColumns: GRID,
@@ -478,7 +478,9 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
           })}
         </div>
       )}
-      <div style={{ flexShrink: 0, maxHeight: 260, overflowY: "auto" }}><InvitesList />{/* patch_fe_invites: put VSP on the table, see your codes, revoke */}</div>
+      {/* patch_fe_positions_split: invitations get at most a third of the view (about three rows in a short window), the
+          rest when the positions above leave it empty; more rows scroll inside the box. */}
+      <div data-testid="invites-slot" style={{ flex: "0 1 auto", maxHeight: "min(260px, 34%)", overflowY: "auto" }}><InvitesList />{/* patch_fe_invites: put VSP on the table, see your codes, revoke */}</div>
     </div>
   );
 }
