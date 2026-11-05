@@ -207,7 +207,7 @@ describe("InvitesList", () => {  // patch_fe_invites_2
     }));
     render(<InvitesList />);
     await waitFor(() => screen.getAllByTestId("invite-row"));
-    expect(screen.getByTestId("invite-note").textContent).toBe("add note");
+    expect(screen.getByTestId("invite-note").textContent).toBe("✎ add note");
     fireEvent.click(screen.getByTestId("invite-note"));
     const edit = screen.getByTestId("invite-note-edit") as HTMLInputElement;
     fireEvent.change(edit, { target: { value: "  Dan  " } });
@@ -222,7 +222,7 @@ describe("InvitesList", () => {  // patch_fe_invites_2
     fireEvent.click(screen.getByTestId("invite-note"));
     fireEvent.change(screen.getByTestId("invite-note-edit"), { target: { value: "" } });
     fireEvent.blur(screen.getByTestId("invite-note-edit"));
-    expect(screen.getByTestId("invite-note").textContent).toBe("add note");
+    expect(screen.getByTestId("invite-note").textContent).toBe("✎ add note");
     expect(localStorage.getItem(`verisphere:invite-notes:${wagmiState.address.toLowerCase()}`)).toBe("{}");
   });
 
@@ -274,8 +274,8 @@ describe("mounts", () => {
   it("Positions carries the list; Claims carries the redeem card and the collapsed-row share icon", () => {
     const portfolio = readFileSync(resolve(process.cwd(), "src/components/Portfolio.tsx"), "utf8");
     expect(portfolio).toContain("<InvitesList />");
-    // patch_fe_positions_split: positions keep the height; invitations are capped to about a third of the view
-    expect(portfolio).toContain('maxHeight: "min(260px, 34%)"');
+    // patch_fe_positions_split_2: positions keep the height; invitations show about three rows unless the positions are few
+    expect(portfolio).toContain("maxHeight: sorted.length <= 4 ? 420 : 170");
     expect(portfolio).toContain('flex: 1, minHeight: 180, overflowY: "auto"');
     const claims = readFileSync(resolve(process.cwd(), "src/components/ClaimsExplorer.tsx"), "utf8");
     expect(claims).toContain("{inviteCode && <RedeemInvite code={inviteCode} />}");

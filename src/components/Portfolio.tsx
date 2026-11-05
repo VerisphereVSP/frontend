@@ -335,7 +335,9 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
             const isExpanded = expandedId === p.post_id;
             const statusColor = p.position_status === "winning" ? S.green :
                                 p.position_status === "losing" ? S.red : S.textMuted;
-            // Display pool total floored at sMax so participation never visually exceeds 100%
+            // patch_fe_stake_total: the STAKE cell shows the claim's real stake (support + challenge), the same number
+            // the Claims view shows. The size capped at sMax is a rate-formula quantity and is shown only as
+            // "Size: x / sMax" in the expanded row (it used to replace the total here: 11 VSP showed as 10.0).
             const smax = p.apr_breakdown?.s_max || p.pool_total;
             const displayedPoolTotal = Math.min(p.pool_total, smax);
             return (
@@ -391,8 +393,8 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
                   <div style={{ padding: "0 4px 0 14px" }}>
                     <VSBar vs={p.verity_score} />
                   </div>
-                  <div style={{ padding: "8px 4px", textAlign: "right", color: S.text }}>
-                    {displayedPoolTotal.toFixed(1)}
+                  <div style={{ padding: "8px 4px", textAlign: "right", color: S.text }} data-testid="position-stake">
+                    {p.pool_total.toFixed(1)}
                   </div>
                   <div style={{ padding: "8px 4px", textAlign: "right", color: p.pool_support > 0 ? S.green : S.textFaint }}>
                     {p.pool_support > 0 ? p.pool_support.toFixed(1) : "—"}
@@ -453,7 +455,7 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
                         verity_score: p.verity_score,
                         stake_support: p.pool_support,
                         stake_challenge: p.pool_challenge,
-                        total_stake: displayedPoolTotal,
+                        total_stake: p.pool_total,
                         controversy: 0,
                         incoming_links: 0,
                         outgoing_links: 0,
@@ -478,9 +480,10 @@ export default function Portfolio() {  // patch_bundle09_p1_page_titles_age_sort
           })}
         </div>
       )}
-      {/* patch_fe_positions_split: invitations get at most a third of the view (about three rows in a short window), the
-          rest when the positions above leave it empty; more rows scroll inside the box. */}
-      <div data-testid="invites-slot" style={{ flex: "0 1 auto", maxHeight: "min(260px, 34%)", overflowY: "auto" }}><InvitesList />{/* patch_fe_invites: put VSP on the table, see your codes, revoke */}</div>
+      {/* patch_fe_positions_split_2: the invitations box shows about three rows (its heading, the table header and three
+          rows ≈ 170 px) and scrolls inside; only when the positions above are few — and so leave the space empty — may it
+          grow to show more. A percentage cap did nothing here: the column has no definite height to resolve it against. */}
+      <div data-testid="invites-slot" style={{ flex: "0 1 auto", maxHeight: sorted.length <= 4 ? 420 : 170, overflowY: "auto" }}><InvitesList />{/* patch_fe_invites: put VSP on the table, see your codes, revoke */}</div>
     </div>
   );
 }
