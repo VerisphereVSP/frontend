@@ -580,7 +580,18 @@ export default function App() {
               {navBtn("Explore", "explore")}
               {navBtn("Claims", "claims")}
               {navBtn("Positions", "portfolio", true)}  {/* patch_bundle09_p1a_nav_portfolio_age_time */}
-              {isConnected && navBtn("Activity", "activity", true, activityCount)}  {/* patch_fe_activity */}
+              {/* patch_fe_activity_bell (Lavey 11-05): not a view tab — a bell that appears only when there is news on your
+                  claims (and stays while you read it), set apart from the tabs by a violet pill. */}
+              {isConnected && (activityCount > 0 || view === "activity") && (
+                <button data-testid="activity-bell" onClick={() => setView("activity")} title="What happened on your claims since you last looked"
+                  style={{ marginLeft: 10, display: "inline-flex", alignItems: "center", gap: 6, background: view === "activity" ? "#5b4bdb" : "#EDEAFB", color: view === "activity" ? "#fff" : "#3b2fb0",
+                           border: "1px solid #c9c2f2", borderRadius: 999, padding: "3px 10px 3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" />
+                  </svg>
+                  {activityCount > 0 ? `${activityCount > 99 ? "99+" : activityCount} on your claims` : "Activity"}
+                </button>
+              )}
               {isConnected && navBtn("Transactions", "transactions", true, unreadCount)}  {/* patch_bundle04_5_p3_tx_nav */}
             </nav>
           </div>

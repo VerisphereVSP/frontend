@@ -131,12 +131,16 @@ describe("useActivityCount", () => {
 describe("App mounts", () => {
   const app = readFileSync(resolve(__dirname, "../App.tsx"), "utf8");
   it("has the Activity view, its nav button with the badge, and the route", () => {
-    expect(app).toContain('navBtn("Activity", "activity", true, activityCount)');
+    // patch_fe_activity_bell: a bell, not a tab — shown only with news (or while on the view), styled apart from the tabs
+    expect(app).not.toContain('navBtn("Activity"');
+    expect(app).toContain('isConnected && (activityCount > 0 || view === "activity") && (');
+    expect(app).toContain('data-testid="activity-bell"');
+    expect(app).toContain('on your claims` : "Activity"');
     expect(app).toContain('location.pathname === "/activity" ? "activity"');
     expect(app).toContain('else if (v === "activity") navigate("/activity")');
     expect(app).toContain('{view === "activity" && <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}><ActivityView /></div>}');
     expect(app).toContain('useActivityCount(isConnected ? address : undefined, view === "activity")');
-    // the Activity button sits before Transactions, both only for a connected wallet
-    expect(app.indexOf('navBtn("Activity"')).toBeLessThan(app.indexOf('navBtn("Transactions"'));
+    // the bell sits before Transactions, both only for a connected wallet
+    expect(app.indexOf('data-testid="activity-bell"')).toBeLessThan(app.indexOf('navBtn("Transactions"'));
   });
 });

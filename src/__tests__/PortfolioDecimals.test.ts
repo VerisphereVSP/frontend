@@ -17,7 +17,14 @@ describe("Portfolio amounts", () => {
     expect(src).not.toContain("p.user_total.toFixed(2)");
   });
   it("pool columns keep 1 decimal", () => {
-    expect(src).toContain("displayedPoolTotal.toFixed(1)");
+    expect(src).toContain("displayedPoolTotal.toFixed(1)");  // the "Size: x / sMax" line of the expanded row
     expect(src).toContain("p.pool_support.toFixed(1)");
+  });
+  // patch_fe_stake_total: the STAKE cell is the claim's real stake, not the size capped at sMax (11 VSP showed as 10.0)
+  it("the STAKE cell shows the real pool total; the sMax-capped size stays in the expanded row only", () => {
+    expect(src).toContain('data-testid="position-stake">\n                    {p.pool_total.toFixed(1)}');
+    expect(src).toContain("total_stake: p.pool_total,");
+    expect(src).not.toContain("total_stake: displayedPoolTotal,");
+    expect(src).toContain("Size: {displayedPoolTotal.toFixed(1)} / {(p.apr_breakdown?.s_max || 0).toFixed(1)}");
   });
 });

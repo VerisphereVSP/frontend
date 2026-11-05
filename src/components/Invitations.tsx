@@ -170,8 +170,9 @@ export function InvitesList() {
                         onBlur={(e) => { if (address) setNotes(setInviteNote(address, r.code_hash, e.target.value)); setEditing(null); }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditing(null); }} />
                     ) : (
-                      <button type="button" data-testid="invite-note" title="Private note — this browser only, never sent" onClick={() => setEditing(r.code_hash)}
-                        style={{ border: "none", background: "none", padding: 0, font: "inherit", cursor: "text", color: notes[r.code_hash] ? S.text : S.textFaint }}>{notes[r.code_hash] || "add note"}</button>
+                      /* patch_fe_invite_notes_2: reads as a control */
+                      <button type="button" data-testid="invite-note" title="Click to write a private note — this browser only, never sent" onClick={() => setEditing(r.code_hash)}
+                        style={{ border: "none", background: "none", padding: 0, font: "inherit", cursor: "pointer", color: notes[r.code_hash] ? S.text : VIOLET, textDecoration: notes[r.code_hash] ? "none" : "underline dotted" }}>{notes[r.code_hash] || "✎ add note"}</button>
                     )}
                   </td>
                   <td style={{ padding: "4px 6px" }}>
@@ -183,7 +184,7 @@ export function InvitesList() {
                   <td style={{ padding: "2px 6px", textAlign: "right" }}>
                     {r.status === "open" && (codes[r.code_hash]
                       ? <button type="button" data-testid="invite-reshare" style={{ ...btn, height: 24, marginRight: 6, color: VIOLET, borderColor: "#D9D4F0" }} title="Copy the snapshot with this invitation again (the code is kept in this browser)" onClick={() => reshare(r)}>Reshare</button>
-                      : <span data-testid="invite-no-code" title="The code was shown once, in the browser that created it; this browser does not have it." style={{ color: S.textFaint, marginRight: 6 }}>code not here</span>)}
+                      : <span data-testid="invite-no-code" title="Reshare needs the code, which was shown once in the browser that created this invitation; this browser does not have it. Invitations created here from now on can be reshared." style={{ color: S.textFaint, marginRight: 6, cursor: "help" }}>created elsewhere</span>)}
                     {r.status === "open" && (
                       <button type="button" data-testid="invite-revoke" style={{ ...btn, height: 24, color: "#B91C1C", borderColor: "#FECACA" }} disabled={busy === r.code_hash}
                         onClick={async () => {
