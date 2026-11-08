@@ -175,6 +175,22 @@ import { readPendingInvite, rememberPendingInvite, forgetPendingInvite, pendingI
 describe("start claim (patch_fe_start_claim)", () => {
   beforeEach(() => { localStorage.clear(); });
 
+  it("claims even when the address lands while the connect is still in flight — the real passkey sequence", async () => {  // patch_fe_start_claim_2
+    // a real passkey: the account hook reports the address before connectAsync resolves, so `busy` is still "wallet"
+    // when the address appears. The sheet used to bail there and never claim.
+    let release!: () => void;
+    const { rerender } = render(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId("start-overlay").textContent).toContain("Regular coffee consumption"));
+    connectAsync.mockImplementationOnce(() => new Promise<void>((res) => { release = res; }));
+    await act(async () => { screen.getByTestId("start-passkey").click(); });
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    await act(async () => { rerender(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />); });
+    expect(redeemCalls).toEqual([]);                 // connect still in flight: nothing yet
+    await act(async () => { release(); });            // connect returns, busy clears
+    await waitFor(() => expect(redeemCalls.length).toBe(1));
+    await waitFor(() => screen.getByTestId("start-step-stake"));
+  });
+
   it("remembers the invitation while it is open and forgets it once the VSP has moved", async () => {
     wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
     render(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
