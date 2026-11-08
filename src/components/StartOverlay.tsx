@@ -172,6 +172,9 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   };
   // patch_fe_start_claim: the gift is claimed the moment a wallet is there — no button to understand, nothing to miss.
   // Three readers in a row connected a wallet and left the sheet with the VSP still on the table.
+  // patch_fe_start_claim_2: `busy` is a dependency. With a real passkey the address lands while busy is still "wallet"
+  // (the connect has not returned), the effect bailed, and nothing re-ran it when busy cleared — the sheet sat on
+  // "Moving N VSP into your wallet…" for ever. The autoTried key keeps it to one attempt per wallet.
   useEffect(() => {
     if (!inviteOpen || !address || !code || busy) return;
     const key = `${code}:${address}`;
@@ -180,7 +183,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
     seen.current("start_claim_shown");
     claim();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inviteOpen, address, code]);
+  }, [inviteOpen, address, code, busy]);
 
   const stake = async () => {
     const v = parseFloat(amount);
