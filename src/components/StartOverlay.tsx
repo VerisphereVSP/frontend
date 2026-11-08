@@ -8,6 +8,7 @@ import { useAccount, useConnect } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useStake } from "@verisphere/protocol";
 import { peekInvite, redeemInvite, type InvitePeek } from "../wallet/invites";
+import { rememberPendingInvite, forgetPendingInvite, inAppBrowser } from "./pending-invite";  // patch_fe_start_claim
 import { PASSKEY_CONNECTOR_ID } from "../wallet/passkey/connector";
 import { useToast } from "./Toast";
 import { closedStartUrl, type Side } from "./start-params";
@@ -72,10 +73,20 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   // the invitation, if the link carried one
   useEffect(() => {
     if (!code) return;
-    peekInvite(code).then((p) => {
+    let alive = true;
+    // patch_fe_start_claim: three tries before concluding anything — a refused or dropped peek used to turn the sheet
+    // into the "this wallet holds no VSP" path with the gift still on the table
+    (async () => {
+      let p: InvitePeek | null = null;
+      for (let i = 0; i < 3 && alive; i++) {
+        try { p = await peekInvite(code); break; } catch { await new Promise((r) => setTimeout(r, 600 * (i + 1))); }
+      }
+      if (!alive) return;
+      if (!p) { setPeek("missing"); setCodeNote("The invitation in this link could not be checked — you can still take a side, or try the code below."); return; }
       setPeek(p);
       if (p.status !== "open") setCodeNote(`The invitation in this link was already ${p.status} — you can still take a side.`);
-    }).catch(() => { setPeek("missing"); setCodeNote("The invitation in this link is not valid — you can still take a side."); });
+    })();
+    return () => { alive = false; };
   }, [code]);
 
   // fee headroom for the default amount
@@ -118,6 +129,13 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
   const stepVsp = !stepWallet && (inviteOpen || checking || (balance != null && balance <= 0 && !redeemed));
   const step = done ? 4 : stepWallet ? 1 : stepVsp ? 2 : 3;
   useEffect(() => { seen.current("start_open"); }, []);
+  // patch_fe_start_claim: the invitation is remembered in this browser until it is taken, so a closed sheet, a reload or
+  // a bounce out of an in-app browser does not lose it (App shows "You have an invitation waiting" until then)
+  useEffect(() => {
+    if (!code) return;
+    if (peek === "missing" || (peek && peek !== null && peek.status !== "open")) { forgetPendingInvite(); return; }
+    rememberPendingInvite({ code, postId, side: sideIn });
+  }, [code, peek, postId, sideIn]);
   useEffect(() => {
     if (step >= 2) seen.current("start_wallet");
     if (step >= 3) seen.current("start_funded");
@@ -133,17 +151,36 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
     finally { setBusy(null); }
   };
 
-  const claim = async () => {
-    if (!code || !address) return;
-    setBusy("claim"); setErr(null);
+  const [typedCode, setTypedCode] = useState("");  // patch_fe_start_claim: for a reader whose link lost its code
+  const [claimFailed, setClaimFailed] = useState(false);
+  const autoTried = useRef<string | null>(null);
+  const claim = async (which?: string) => {
+    const c = (which ?? code ?? "").trim();
+    if (!c || !address) return;
+    setBusy("claim"); setErr(null); setClaimFailed(false);
     try {
-      const d = await redeemInvite(code, address);
+      const d = await redeemInvite(c, address);
       setRedeemed(d.amount_vsp);
+      seen.current("start_claim_ok");
+      forgetPendingInvite();
       toast(`${d.amount_vsp} VSP received.`, "success");
     } catch (e: any) {
+      setClaimFailed(true);
+      seen.current("start_claim_fail");
       setErr(e?.message || "Could not claim the invitation.");
     } finally { setBusy(null); }
   };
+  // patch_fe_start_claim: the gift is claimed the moment a wallet is there — no button to understand, nothing to miss.
+  // Three readers in a row connected a wallet and left the sheet with the VSP still on the table.
+  useEffect(() => {
+    if (!inviteOpen || !address || !code || busy) return;
+    const key = `${code}:${address}`;
+    if (autoTried.current === key) return;
+    autoTried.current = key;
+    seen.current("start_claim_shown");
+    claim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteOpen, address, code]);
 
   const stake = async () => {
     const v = parseFloat(amount);
@@ -194,9 +231,15 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
         {codeNote && <div data-testid="start-code-note" style={{ marginTop: 10, padding: "8px 12px", background: P.tint, border: `1px solid ${P.line}`, borderRadius: 10, fontSize: 13, color: P.violetDeep }}>{codeNote}</div>}
 
         {/* 1 · wallet */}
-        {h(1, "A wallet", step > 1 ? "done" : "now")}
+        {h(1, "Open a wallet", step > 1 ? "done" : "now")}
         {step === 1 ? (
           <div data-testid="start-step-wallet">
+            {inAppBrowser() && (
+              <div data-testid="start-inapp" style={{ margin: "0 0 10px", padding: "8px 12px", background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, fontSize: 13, color: "#9A3412", lineHeight: 1.45 }}>
+                This page opened inside an app's own browser, where passkeys often fail. Open it in your phone's browser instead:
+                <button type="button" data-testid="start-copy-link" style={{ ...btn, padding: "6px 10px", marginLeft: 8, fontSize: 13 }} onClick={async () => { try { await navigator.clipboard.writeText(window.location.href); toast("Link copied — paste it into Safari or Chrome.", "success"); } catch { /* fine */ } }}>Copy this link</button>
+              </div>
+            )}
             <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}>A passkey wallet lives behind your device's own lock (face, fingerprint or PIN): no app to install, no phrase to write down.</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" data-testid="start-passkey" style={primary} disabled={busy === "wallet"} onClick={connectPasskey}>{busy === "wallet" ? "Opening…" : "Create a passkey wallet"}</button>
@@ -205,18 +248,25 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
           </div>
         ) : address ? <div style={{ fontSize: 13, color: P.muted, marginLeft: 34 }}>{short(address)}</div> : null}
 
-        {/* 2 · VSP */}
-        {h(2, "VSP to stake", step > 2 ? "done" : step === 2 ? "now" : "later")}
+        {/* 2 · VSP — patch_fe_start_claim: plain words; the gift claims itself; a code field for a link that lost its code */}
+        {h(2, openPeek ? `Your ${openPeek.amount_vsp} VSP` : redeemed ? `Your ${redeemed} VSP` : "VSP to stake", step > 2 ? "done" : step === 2 ? "now" : "later")}
         {step === 2 && inviteOpen && openPeek && (
           <div data-testid="start-step-claim" style={{ marginLeft: 34 }}>
-            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}><b style={{ color: P.ink }}>{openPeek.amount_vsp} VSP is on the table for you</b> — whoever shared this put it there so you can take a side without buying first.</p>
-            <button type="button" data-testid="start-claim" style={primary} disabled={busy === "claim"} onClick={claim}>{busy === "claim" ? "Claiming…" : `Claim ${openPeek.amount_vsp} VSP`}</button>
+            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}><b style={{ color: P.ink }}>Whoever shared this put {openPeek.amount_vsp} VSP on the table for you</b>, so you can take a side without buying anything.</p>
+            {claimFailed
+              ? <button type="button" data-testid="start-claim" style={primary} disabled={busy === "claim"} onClick={() => claim()}>{busy === "claim" ? "Trying again…" : `Try again — take the ${openPeek.amount_vsp} VSP`}</button>
+              : <div data-testid="start-claiming" style={{ fontSize: 14, color: P.violetDeep, fontWeight: 600 }}>Moving {openPeek.amount_vsp} VSP into your wallet…</div>}
           </div>
         )}
         {step === 2 && !inviteOpen && checking && <div data-testid="start-checking" style={{ marginLeft: 34, fontSize: 13, color: P.faint }}>Checking your wallet…</div>}
         {step === 2 && !inviteOpen && !checking && (
           <div data-testid="start-step-fund" style={{ marginLeft: 34 }}>
-            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}>This wallet holds no VSP yet. The market panel sells VSP for AVAX; paying by card is coming. Or ask whoever shared this claim for an invitation — it arrives as a link like this one.</p>
+            <p style={{ margin: "0 0 10px", fontSize: 14, color: P.muted, lineHeight: 1.45 }}>This wallet holds no VSP yet. If whoever shared this claim gave you an invitation code, enter it here; otherwise the market panel sells VSP for AVAX, and paying by card is coming.</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+              <input data-testid="start-code-input" value={typedCode} onChange={(e) => setTypedCode(e.target.value.toUpperCase())} placeholder="VSP-XXXX-XXXX-XXXX" spellCheck={false} autoCapitalize="characters"
+                style={{ width: 190, padding: "10px 10px", fontSize: 15, fontWeight: 600, border: `1px solid ${P.line}`, borderRadius: 10, letterSpacing: 0.5 }} />
+              <button type="button" data-testid="start-code-claim" style={primary} disabled={busy === "claim" || typedCode.trim().length < 8} onClick={() => claim(typedCode)}>{busy === "claim" ? "Claiming…" : "Take the VSP"}</button>
+            </div>
             <button type="button" data-testid="start-recheck" style={btn} onClick={async () => { if (address) { const b = await vspBalance(address); if (b != null) setBalance(b); } }}>I have VSP now</button>
           </div>
         )}
@@ -263,7 +313,7 @@ export default function StartOverlay({ postId, side: sideIn, code, onClose }: { 
 
         {step < 4 && (
           <div style={{ marginTop: 18, textAlign: "center" }}>
-            <button type="button" data-testid="start-skip" onClick={close} style={{ border: "none", background: "none", color: P.faint, fontSize: 13, textDecoration: "underline", cursor: "pointer" }}>Skip for now — just show me the claim</button>
+            <button type="button" data-testid="start-skip" onClick={close} style={{ border: "none", background: "none", color: P.faint, fontSize: 13, textDecoration: "underline", cursor: "pointer" }}>No thanks — just show me the claim</button>
           </div>
         )}
       </div>

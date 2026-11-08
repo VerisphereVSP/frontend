@@ -61,7 +61,9 @@ export default function PoolMarketWidget({ initial }: { initial: PoolState | nul
 
   return (
     <div className="vsp-market-widget" data-trackb="pool-market">
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* patch_fe_header_wrap (Lavey 11-08): on a phone in portrait this row overflowed the viewport and, with the page's
+          horizontal scroll locked, Buy / Sell and the price were simply unreachable; the row now wraps on narrow screens */}
+      <div className="pool-market-row" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* patch_venue r7 order (founder direction): pill · VSP balance
             (price-styled) · Buy/Sell · price ($n.nnnn/VSP, pool-link-sized)
             · pool. r4 note stands: the pill is the app's only connect control. */}

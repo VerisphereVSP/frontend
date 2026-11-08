@@ -2,7 +2,8 @@
 // One anonymous count per Start-sheet step: {step} and nothing else — no address, no id, no cookie. Fire-and-forget;
 // the app never waits on it or shows an error for it.
 const API = import.meta.env.VITE_API_BASE || "/api";
-export type FunnelStep = "start_open" | "start_wallet" | "start_funded" | "start_staked" | "start_skip" | "ext_install_tap";  // patch_fe_install_ext
+export type FunnelStep = "start_open" | "start_wallet" | "start_funded" | "start_staked" | "start_skip" | "ext_install_tap"
+  | "start_claim_shown" | "start_claim_ok" | "start_claim_fail" | "pending_banner_tap";  // patch_fe_install_ext; patch_fe_start_claim
 
 export function track(step: FunnelStep): void {
   try {

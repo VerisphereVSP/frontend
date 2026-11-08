@@ -65,16 +65,16 @@ describe("StartOverlay", () => {
     // re-render with the connection the mock recorded
     cleanup();
     render(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={onClose} />);
-    await waitFor(() => screen.getByTestId("start-step-claim"));
-    expect(screen.getByTestId("start-step-claim").textContent).toContain("2 VSP is on the table for you");
+    // patch_fe_start_claim: the gift claims itself the moment the wallet is there — no button to miss
+    await waitFor(() => expect(redeemCalls.length).toBe(1));
+    expect(redeemCalls[0]).toEqual({ code: "VSP-AAAA-BBBB-CCCC", address: "0x2222222222222222222222222222222222222222" });
+    await waitFor(() => screen.getByTestId("start-step-stake"));
   });
 
   it("step 2 → 3: claims the invitation, then stakes the pre-chosen side with the fee headroom taken off", async () => {
     wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
     render(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
-    await waitFor(() => screen.getByTestId("start-claim"));
-    await act(async () => { screen.getByTestId("start-claim").click(); });
-    expect(redeemCalls).toEqual([{ code: "VSP-AAAA-BBBB-CCCC", address: "0x2222222222222222222222222222222222222222" }]);
+    await waitFor(() => expect(redeemCalls).toEqual([{ code: "VSP-AAAA-BBBB-CCCC", address: "0x2222222222222222222222222222222222222222" }]));  // patch_fe_start_claim: automatic
     await waitFor(() => screen.getByTestId("start-step-stake"));
     await waitFor(() => expect((screen.getByTestId("start-amount") as HTMLInputElement).value).toBe("1.75"));  // 2 received − 0.25 cap
     expect(screen.getByTestId("start-stake").textContent).toBe("Stake 1.75 VSP to challenge it");  // the side from the share page
@@ -105,7 +105,8 @@ describe("StartOverlay", () => {
     const onClose = vi.fn();
     render(<StartOverlay postId={142} side="support" code={null} onClose={onClose} />);
     await waitFor(() => screen.getByTestId("start-step-fund"));
-    expect(screen.getByTestId("start-step-fund").textContent).toContain("ask whoever shared this claim for an invitation");
+    expect(screen.getByTestId("start-step-fund").textContent).toContain("If whoever shared this claim gave you an invitation code, enter it here");
+    expect(screen.getByTestId("start-code-input")).toBeTruthy();  // patch_fe_start_claim: a link that lost its code is not a dead end
     expect(screen.getByTestId("start-step-fund").textContent).not.toMatch(/price|invest|return/i);
     await act(async () => { screen.getByTestId("start-skip").click(); });
     expect(onClose).toHaveBeenCalled();
@@ -133,13 +134,11 @@ describe("funnel counts (patch_fe_funnel)", () => {
     vi.stubGlobal("navigator", { ...navigator, sendBeacon: beacon });
     wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
     render(<StartOverlay postId={142} side="support" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
-    await waitFor(() => screen.getByTestId("start-claim"));
-    await act(async () => { screen.getByTestId("start-claim").click(); });
-    await waitFor(() => screen.getByTestId("start-stake"));
+    await waitFor(() => screen.getByTestId("start-stake"));  // patch_fe_start_claim: the claim happened by itself
     await waitFor(() => expect((screen.getByTestId("start-amount") as HTMLInputElement).value).toBe("1.75"));
     await act(async () => { screen.getByTestId("start-stake").click(); });
     await waitFor(() => screen.getByTestId("start-done"));
-    await waitFor(() => expect(posted).toEqual(["start_open", "start_wallet", "start_funded", "start_staked"]));
+    await waitFor(() => expect(posted).toEqual(["start_open", "start_wallet", "start_claim_shown", "start_claim_ok", "start_funded", "start_staked"]));
     for (const call of beacon.mock.calls) expect(call[0]).toBe("/api/funnel");
     const bodies = await Promise.all(beacon.mock.calls.map((c: any[]) => readBlob(c[1])));
     for (const b of bodies) expect(Object.keys(JSON.parse(b))).toEqual(["step"]);  // the step and nothing else
@@ -166,5 +165,110 @@ describe("the rule (patch_payoff)", () => {
     expect(guide).toContain("paid by the protocol, never by the other side");
     expect(guide).toContain("## What this is — and what it isn't");
     expect(guide).not.toContain("If the claim holds up, you earn; if it doesn't, you lose.");
+  });
+});
+
+// patch_fe_start_claim: the claim happens by itself, a failure can be retried, a lost code can be typed, the invitation
+// is remembered until taken, and an in-app browser is told to open the real one.
+import { readPendingInvite, rememberPendingInvite, forgetPendingInvite, pendingInviteUrl, inAppBrowser } from "../components/pending-invite";
+
+describe("start claim (patch_fe_start_claim)", () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it("remembers the invitation while it is open and forgets it once the VSP has moved", async () => {
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    render(<StartOverlay postId={142} side="challenge" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => expect(readPendingInvite()?.code).toBe("VSP-AAAA-BBBB-CCCC"));
+    await waitFor(() => expect(redeemCalls.length).toBe(1));
+    await waitFor(() => expect(readPendingInvite()).toBeNull());
+  });
+
+  it("a spent code is not remembered", async () => {
+    peek = { status: "redeemed", amount_vsp: "2", expires_at: "2026-12-01T00:00:00Z", post_id: 142 };
+    rememberPendingInvite({ code: "VSP-AAAA-BBBB-CCCC", postId: 142, side: null });
+    render(<StartOverlay postId={142} side={null} code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId("start-code-note").textContent).toContain("already redeemed"));
+    expect(readPendingInvite()).toBeNull();
+    expect(redeemCalls).toEqual([]);
+  });
+
+  it("a failed claim says so and offers to try again; the funnel sees start_claim_fail", async () => {
+    const posted: string[] = [];
+    const readBlob = (b: Blob) => new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(b); });
+    vi.stubGlobal("navigator", { ...navigator, sendBeacon: vi.fn((_u: string, b: Blob) => { readBlob(b).then((t) => posted.push(JSON.parse(t).step)); return true; }) });
+    const base = globalThis.fetch as any;
+    let fail = true;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: any) => {
+      if (String(url).endsWith("/invites/redeem") && fail) return new Response(JSON.stringify({ detail: "Relay busy" }), { status: 503 });
+      return base(url, init);
+    }));
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    render(<StartOverlay postId={142} side="support" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-claim"));
+    expect(screen.getByTestId("start-claim").textContent).toBe("Try again — take the 2 VSP");
+    expect(screen.getByTestId("start-error").textContent).toContain("Relay busy");
+    await waitFor(() => expect(posted).toContain("start_claim_fail"));
+    expect(readPendingInvite()?.code).toBe("VSP-AAAA-BBBB-CCCC");  // still waiting
+    fail = false;
+    await act(async () => { screen.getByTestId("start-claim").click(); });
+    await waitFor(() => screen.getByTestId("start-step-stake"));
+    expect(redeemCalls.length).toBe(1);
+  });
+
+  it("a link without a code: the code can be typed and taken", async () => {
+    wagmiState.isConnected = true; wagmiState.address = "0x2222222222222222222222222222222222222222";
+    render(<StartOverlay postId={142} side="support" code={null} onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-code-input"));
+    expect((screen.getByTestId("start-code-claim") as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByTestId("start-code-input"), { target: { value: "vsp-aaaa-bbbb-cccc" } });
+    expect((screen.getByTestId("start-code-input") as HTMLInputElement).value).toBe("VSP-AAAA-BBBB-CCCC");
+    await act(async () => { screen.getByTestId("start-code-claim").click(); });
+    expect(redeemCalls).toEqual([{ code: "VSP-AAAA-BBBB-CCCC", address: "0x2222222222222222222222222222222222222222" }]);
+    await waitFor(() => screen.getByTestId("start-step-stake"));
+  });
+
+  it("inside Messenger's browser the first step says to open the real one, with the link to copy", async () => {
+    const written: string[] = [];
+    vi.stubGlobal("navigator", { ...navigator, userAgent: "Mozilla/5.0 (iPhone) [FBAN/FBIOS;FBAV/400.0]", clipboard: { writeText: async (t: string) => { written.push(t); } } });
+    render(<StartOverlay postId={142} side="support" code="VSP-AAAA-BBBB-CCCC" onClose={vi.fn()} />);
+    await waitFor(() => screen.getByTestId("start-inapp"));
+    await act(async () => { screen.getByTestId("start-copy-link").click(); });
+    expect(written[0]).toContain("start=1&code=VSP-AAAA-BBBB-CCCC");
+    expect(inAppBrowser("Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile Safari/537.36")).toBe(false);
+    expect(inAppBrowser("Mozilla/5.0 (Linux; Android 14) ... Instagram 300.0")).toBe(true);
+  });
+
+  it("the pending-invite store and the link that re-opens the sheet", () => {
+    expect(readPendingInvite()).toBeNull();
+    rememberPendingInvite({ code: "VSP-AAAA-BBBB-CCCC", postId: 142, side: "challenge" });
+    const p = readPendingInvite()!;
+    expect(p.code).toBe("VSP-AAAA-BBBB-CCCC");
+    expect(pendingInviteUrl(p)).toBe("/claims?post=142&start=1&code=VSP-AAAA-BBBB-CCCC&side=challenge");
+    forgetPendingInvite();
+    expect(readPendingInvite()).toBeNull();
+  });
+
+  it("App shows the waiting-invitation banner until it is taken or dismissed", () => {
+    const app = readFileSync(resolve(__dirname, "../App.tsx"), "utf8");
+    expect(app).toContain('{pending && !start && (');
+    expect(app).toContain('data-testid="pending-invite-take"');
+    expect(app).toContain('setStart({ postId: p.postId, side: p.side, code: p.code }); navigate(pendingInviteUrl(p));');
+    expect(app).toContain('data-testid="pending-invite-dismiss"');
+    expect(app).toContain('useEffect(() => { if (!start) setPending(readPendingInvite()); }, [start]);');
+  });
+
+  it("the Claims view has a door for a code told by a friend, with no link at all", () => {
+    const src = readFileSync(resolve(__dirname, "../components/ClaimsExplorer.tsx"), "utf8");
+    expect(src).toContain('data-testid="have-code-open"');
+    expect(src).toContain(">Have an invitation code?</button>");
+    expect(src).toContain("{!inviteCode && goCode && <RedeemInvite key={goCode} code={goCode} />}");
+  });
+
+  it("plain words: the step headings and the skip", () => {
+    const src = readFileSync(resolve(__dirname, "../components/StartOverlay.tsx"), "utf8");
+    expect(src).toContain('h(1, "Open a wallet"');
+    expect(src).toContain('openPeek ? `Your ${openPeek.amount_vsp} VSP`');
+    expect(src).toContain("No thanks — just show me the claim");
+    expect(src).not.toContain("Skip for now");
   });
 });
