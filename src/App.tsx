@@ -14,6 +14,8 @@ import StartOverlay from "./components/StartOverlay";  // patch_fe_start
 import { startParams } from "./components/start-params";  // patch_fe_start
 import InstallExtension from "./components/InstallExtension";  // patch_fe_install_ext
 import ActivityView, { useActivityCount } from "./components/ActivityView";  // patch_fe_activity
+import { readPendingInvite, forgetPendingInvite, pendingInviteUrl } from "./components/pending-invite";  // patch_fe_start_claim
+import { track } from "./funnel";  // patch_fe_start_claim
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 type View = "explore" | "claims" | "portfolio" | "transactions" | "activity";  /* patch_bundle04_5_p3_tx_nav; patch_fe_activity */
@@ -397,6 +399,10 @@ export default function App() {
   // patch_fe_start: a share page's "Back it with VSP" lands at /claims?post=&side=&start=1[&code=] — the Start walk-through
   // opens over the Claims view once, on arrival, and closes into the plain claim
   const [start, setStart] = useState(() => startParams());
+  // patch_fe_start_claim: an invitation that arrived in a share link and was not taken (sheet closed, reload, in-app
+  // browser bounce) is remembered in this browser; a banner offers it until it is taken or dismissed
+  const [pending, setPending] = useState(() => readPendingInvite());
+  useEffect(() => { if (!start) setPending(readPendingInvite()); }, [start]);
   // patch_bundle04_5_p3_tx_pathname
   const view = location.pathname === "/claims" ? "claims"
     : location.pathname === "/portfolio" ? "portfolio"
@@ -569,6 +575,15 @@ export default function App() {
   return (
     <div className="app-shell">{/* patch_fe_mobile_shell: 100dvh + no horizontal overflow (styles.css) */}
       {/* Top bar */}
+      {pending && !start && (
+        <div data-testid="pending-invite-banner" style={{ flexShrink: 0, background: "#EDEAFB", borderBottom: "1px solid #D9D4F0", color: "#37299B", padding: "8px 14px", fontSize: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ flex: 1, minWidth: 200 }}>You have an invitation waiting — VSP set aside for you to take a side with.</span>
+          <button type="button" data-testid="pending-invite-take" onClick={() => { track("pending_banner_tap"); const p = pending; setStart({ postId: p.postId, side: p.side, code: p.code }); navigate(pendingInviteUrl(p)); }}
+            style={{ background: "#5B4BC4", color: "#fff", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Take it</button>
+          <button type="button" data-testid="pending-invite-dismiss" aria-label="Dismiss" onClick={() => { forgetPendingInvite(); setPending(null); }}
+            style={{ background: "none", border: "none", color: "#8A84A6", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+      )}
       <header className="top-bar" style={{ flexShrink: 0 }}>
         <div className="top-bar-container">
           <div className="brand-nav">{/* patch_fe_mobile_shell: wraps on phones instead of widening the viewport */}

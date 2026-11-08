@@ -22,4 +22,11 @@ describe("mobile shell", () => {
     expect(app).toContain('<nav className="top-nav">');
     expect(css).toMatch(/input, select, textarea \{ max-width: 100%/);
   });
+  // patch_fe_header_wrap: the wallet row (pill · balance · Buy/Sell · price) wraps on phones instead of running off-screen
+  it("the wallet row wraps on phones so Buy / Sell stay reachable", () => {
+    const widget = readFileSync(resolve(process.cwd(), "src/components/PoolMarketWidget.tsx"), "utf8");
+    expect(widget).toContain('<div className="pool-market-row" style={{ display: "flex", alignItems: "center", gap: 10 }}>');
+    expect(css).toMatch(/@media \(max-width: 768px\) \{[^@]*\.pool-market-row \{ flex-wrap: wrap; row-gap: 8px; max-width: 100%; \}/);
+    expect(css).toMatch(/\.vsp-market-widget \{ max-width: 100%; min-width: 0; \}/);
+  });
 });

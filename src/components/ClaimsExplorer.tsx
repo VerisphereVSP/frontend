@@ -194,9 +194,28 @@ export default function ClaimsExplorer() {
   ];
 
   const inviteCode = startParams() ? null : codeFromLocation();  // patch_fe_invites: a share link carried an invitation (patch_fe_start: the overlay owns it on arrival)
+  // patch_fe_start_claim: a reader told a code by a friend, with no link at all, has a door too
+  const [askCode, setAskCode] = useState(false);
+  const [typedCode, setTypedCode] = useState("");
+  const [goCode, setGoCode] = useState<string | null>(null);
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column" as const, height: "100%", minHeight: 0 }}>
       {inviteCode && <RedeemInvite code={inviteCode} />}
+      {!inviteCode && goCode && <RedeemInvite key={goCode} code={goCode} />}
+      {!inviteCode && !goCode && (
+        <div data-testid="have-code" style={{ margin: "0 0 10px", fontSize: 13, color: "#5D5776", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {askCode ? (
+            <>
+              <input data-testid="have-code-input" value={typedCode} onChange={(e) => setTypedCode(e.target.value.toUpperCase())} placeholder="VSP-XXXX-XXXX-XXXX" spellCheck={false} autoCapitalize="characters"
+                style={{ width: 190, padding: "7px 10px", fontSize: 14, fontWeight: 600, border: "1px solid #E4E1F2", borderRadius: 8, letterSpacing: 0.5 }} />
+              <button type="button" data-testid="have-code-go" disabled={typedCode.trim().length < 8} onClick={() => setGoCode(typedCode.trim())}
+                style={{ padding: "7px 12px", borderRadius: 999, border: "none", background: "#5B4BC4", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Check the code</button>
+            </>
+          ) : (
+            <button type="button" data-testid="have-code-open" onClick={() => setAskCode(true)} style={{ border: "none", background: "none", padding: 0, color: "#5B4BC4", textDecoration: "underline", cursor: "pointer", font: "inherit" }}>Have an invitation code?</button>
+          )}
+        </div>
+      )}
       {/* Header */}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
