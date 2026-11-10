@@ -353,7 +353,7 @@ export function ExpandedClaimDetail({
           postTotal={c.stake_support + c.stake_challenge}
           onDone={onRefresh}
           compact
-          label="Your stake on this claim:"
+          label={c.is_link ? "Your stake on this link:" : "Your stake on this claim:"}  /* patch_fe_stake_label: a link row is a link */
         />
         <span
           onClick={onClose}
