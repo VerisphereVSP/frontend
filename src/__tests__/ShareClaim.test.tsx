@@ -188,6 +188,9 @@ describe("ShareClaim", () => {
     expect(src).toContain("patch_fe_verisnap_share");
     const shared = readFileSync(resolve(process.cwd(), "src/components/claims-shared.tsx"), "utf8");
     expect(shared).toContain('<ShareClaim postId={c.post_id} variant="button" />');
+    // patch_fe_stake_label: the stake row under an expanded link row says "link", not "claim"
+    expect(shared).toContain('label={c.is_link ? "Your stake on this link:" : "Your stake on this claim:"}');
+    expect(shared).not.toContain('label="Your stake on this claim:"');
     const article = readFileSync(resolve(process.cwd(), "src/components/article/ArticleView.tsx"), "utf8");
     expect((article.match(/<ShareClaim postId=\{s\.post_id\} variant="icon" onActivate=\{\(\) => \{ if \(selId !== s\.sentence_id\) \{ setSelId\(s\.sentence_id\);/g) || []).length).toBe(2);  // both Explore lanes select the sentence (patch_fe_share_fixes)
   });
