@@ -20,7 +20,7 @@ import {
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
-type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic" | "created_epoch";  // patch_bundle09_p1_page_titles_age_sort
+type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic" | "created_epoch" | "incoming_links" | "outgoing_links";  // patch_fe_sort_number  // patch_bundle09_p1_page_titles_age_sort
 type SortDir = "asc" | "desc";
 
 export default function ClaimsExplorer() {
@@ -187,8 +187,8 @@ export default function ClaimsExplorer() {
     { key: "total_stake", label: "Stake" },
     { key: "stake_support", label: "Support" },
     { key: "stake_challenge", label: "Challenge" },
-    { key: "post_id", label: "In", align: "right" },
-    { key: "post_id", label: "Out", align: "right" },
+    { key: "incoming_links", label: "In", align: "right" },   // patch_fe_sort_number: In/Out sort by their own counts
+    { key: "outgoing_links", label: "Out", align: "right" },
     { key: "controversy", label: "Controv." },
     { key: "topic", label: "Topic" },
   ];
@@ -307,15 +307,15 @@ export default function ClaimsExplorer() {
                 ci === 8 || ci === 9 ? "10px 10px 10px 4px" :  // In/Out right-pad
                 "10px 4px";
               return (
-                <div key={ci} onClick={() => ci !== 0 ? toggleSort(col.key) : null} style={{
-                  padding: headerPad, cursor: ci !== 0 ? "pointer" : "default",
+                <div key={ci} data-testid={`sort-${col.label}`} onClick={() => toggleSort(col.key)} style={{  /* patch_fe_sort_number: # sorts too */
+                  padding: headerPad, cursor: "pointer",
                   userSelect: "none" as const, whiteSpace: "nowrap" as const,
                   fontWeight: 600, fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".03em",
-                  color: sortKey === col.key && ci !== 0 ? S.blue : S.textFaint,
+                  color: sortKey === col.key ? S.blue : S.textFaint,
                   textAlign: align as any,
                 }}>
                   {col.label}
-                  {sortKey === col.key && ci !== 0 && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
+                  {sortKey === col.key && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
                 </div>
               );
             })}
