@@ -1,6 +1,6 @@
 # Verisphere: A Truth-Staking Protocol
-### White Paper — v18.3 (October 2026)
-**Date:** October 2026
+### White Paper — v18.4 (November 2026)
+**Date:** November 2026
 **Contact:** info@verisphere.co
 
 > **Scope.** This paper describes the Verisphere **protocol** only: the on-chain
@@ -14,7 +14,7 @@
 
 ## Abstract
 
-Verisphere is a decentralized protocol for economically evaluating factual claims. Any participant may publish a claim on-chain and any participant may stake tokens to support or challenge it. Claims accumulate a Verity Score derived from the ratio and magnitude of stakes on each side. Evidence links between claims propagate truth-pressure through a directed graph, creating an interconnected epistemic structure where the credibility of each claim depends on the credibility of its evidence.
+Verisphere is a permissionless protocol for economically evaluating factual claims. Any participant may publish a claim on-chain and any participant may stake tokens to support or challenge it. Claims accumulate a Verity Score derived from the ratio and magnitude of stakes on each side. Evidence links between claims propagate truth-pressure through a directed graph, creating an interconnected epistemic structure where the credibility of each claim depends on the credibility of its evidence.
 
 The protocol operates on the Avalanche C-Chain using the VSP ERC-20 token. All scoring, staking, and evidence-linking logic is implemented in upgradeable Solidity contracts. The protocol is permissionless: any front-end, API, or automated agent may interact with the on-chain contracts directly.
 
@@ -24,13 +24,17 @@ The protocol operates on the Avalanche C-Chain using the VSP ERC-20 token. All s
 
 ## 1. Motivation
 
-Existing information systems lack a mechanism for attaching economic cost to factual assertions. Search engines rank by engagement. Social platforms rank by virality. Encyclopedias rely on editorial consensus. Prediction markets handle binary, terminal events but cannot evaluate persistent, evolving claims such as "nuclear energy is environmentally sustainable" or "dietary saturated fat increases cardiovascular risk."
+Existing information sources rely upon authorities to decide what information flows to their readers, authorities whom readers cannot readily see, and whose decisions they cannot readily contest. Encyclopedias rely on editorial consensus, journals on peer review, fact-checkers on their own verdicts, and prediction markets on a designated resolution source.
+
+Three consequences follow. Asserting something costs nothing, and being right early earns nothing. The reader is shown a conclusion, not the state of the dispute behind it. And claims are evaluated one at a time, so a change in the standing of one does not carry through to the claims that depend on it.
+
+Prediction markets attach a cost to a position, but only for the special case of a claim with a scheduled, decisive answer. They are not built for persistent claims such as "nuclear energy is environmentally sustainable" or "dietary saturated fat increases cardiovascular risk," which have no closing date and no agreed referee.
 
 Verisphere addresses this gap by introducing a protocol where:
 
 - Publishing a claim requires burning a fee, eliminating zero-cost spam.
 - Supporting or challenging a claim requires staking tokens, imposing a cost on both truthful and untruthful assertions.
-- Correct positions accrue value over time; incorrect positions lose it.
+- Positions on the side a claim's score favors accrue value over time; positions on the other side lose it.
 - Evidence relationships between claims are first-class on-chain objects with their own stake and credibility.
 
 The protocol does not determine truth. It creates economic pressure that makes being wrong expensive and being right profitable, and it makes the resulting score transparent and auditable.
@@ -342,6 +346,8 @@ held by a `TimelockController` whose sole proposer and executor is a multi-signa
 days on mainnet) between the scheduling and the execution of any privileged action,
 and the timelock admin role is renounced at deployment, so there is no deployer
 backdoor and no unilateral fast path.
+
+**Current status.** Much of the protocol is decentralized today. It runs on a public blockchain that neither the operating company nor governance controls. It is permissionless: no approval is needed to publish a claim, stake, link evidence, or settle a post, and no one need use any particular relay or front end. What is not yet decentralized is control over the rules. The power to change parameters and to upgrade the contracts rests with the operations Safe described above, and no mechanism yet exists through which token holders or the wider community could hold it. The intent is to hand that power to such a mechanism once it has been developed; until then the present arrangement stands, bounded by the timelock and by the limits listed at the end of this section.
 
 Alongside governance, a separate **guardian** role (held by a dedicated
 multi-signature Safe) can pause the protocol's entry points — new stakes and new
