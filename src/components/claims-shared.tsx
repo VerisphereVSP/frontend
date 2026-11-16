@@ -64,6 +64,21 @@ export type QueueEntry = {
   position_weight: number;
 };
 
+// patch_fe_evidence_marker: the Support / Challenge columns show DIRECT stake only, while the score also counts
+// evidence arriving through links. directScore is what the direct stake alone would read; evidenceNote says so
+// when a post has incoming links and its score differs from that, and is null otherwise.
+export function directScore(support: number, challenge: number): number | null {
+  const t = (support || 0) + (challenge || 0);
+  return t > 0 ? (((support || 0) - (challenge || 0)) / t) * 100 : null;
+}
+export function evidenceNote(c: { stake_support: number; stake_challenge: number; verity_score: number; incoming_links?: number }): string | null {
+  const d = directScore(c.stake_support, c.stake_challenge);
+  if (d == null || !(c.incoming_links && c.incoming_links > 0)) return null;
+  if (Math.abs(d - c.verity_score) < 0.05) return null;
+  const f = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+  return `Direct stake alone: ${f(d)} · with linked evidence: ${f(c.verity_score)}`;
+}
+
 type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic";
 type SortDir = "asc" | "desc";
 

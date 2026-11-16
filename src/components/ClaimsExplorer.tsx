@@ -13,14 +13,17 @@ import { codeFromLocation } from "../wallet/invites";  // patch_fe_invites
 import { startParams } from "./start-params";  // patch_fe_start
 import {
   S, GRID, LINK_GRID, formatAge,
-  AddressTooltip, QueueView, Badge, ExpandedClaimDetail,
+  AddressTooltip, QueueView, Badge, ExpandedClaimDetail, evidenceNote,
   type Claim,
 } from "./claims-shared";
+
+// patch_fe_evidence_marker
+const DIRECT_HINT = "Direct stake on this post. Evidence arriving through links is not included here; it is counted in the score.";
 
 
 const API = import.meta.env.VITE_API_BASE || "/api";
 
-type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic" | "created_epoch";  // patch_bundle09_p1_page_titles_age_sort
+type SortKey = "post_id" | "text" | "verity_score" | "total_stake" | "stake_support" | "stake_challenge" | "controversy" | "topic" | "created_epoch" | "incoming_links" | "outgoing_links";  // patch_fe_sort_number  // patch_bundle09_p1_page_titles_age_sort
 type SortDir = "asc" | "desc";
 
 export default function ClaimsExplorer() {
@@ -178,17 +181,18 @@ export default function ClaimsExplorer() {
   const avgVS = dedupClaims.length > 0 ? dedupClaims.reduce((s, c) => s + c.verity_score, 0) / dedupClaims.length : 0;
   const mostControversial = dedupClaims.length > 0 ? dedupClaims.reduce((a, b) => (a.controversy > b.controversy ? a : b)) : null;
 
-  const COLS: { key: SortKey; label: string; align?: string }[] = [
+  const COLS: { key: SortKey; label: string; align?: string; title?: string }[] = [
     { key: "post_id", label: "#" },
     { key: "created_epoch", label: "Age" },
     { key: "text", label: "C/L" },
     { key: "text", label: "Claim / Link" },
     { key: "verity_score", label: "VS" },
-    { key: "total_stake", label: "Stake" },
-    { key: "stake_support", label: "Support" },
-    { key: "stake_challenge", label: "Challenge" },
-    { key: "post_id", label: "In", align: "right" },
-    { key: "post_id", label: "Out", align: "right" },
+    // patch_fe_evidence_marker: these three count direct stake only; the header says so on hover
+    { key: "total_stake", label: "Stake", title: DIRECT_HINT },
+    { key: "stake_support", label: "Support", title: DIRECT_HINT },
+    { key: "stake_challenge", label: "Challenge", title: DIRECT_HINT },
+    { key: "incoming_links", label: "In", align: "right" },   // patch_fe_sort_number: In/Out sort by their own counts
+    { key: "outgoing_links", label: "Out", align: "right" },
     { key: "controversy", label: "Controv." },
     { key: "topic", label: "Topic" },
   ];
@@ -307,15 +311,15 @@ export default function ClaimsExplorer() {
                 ci === 8 || ci === 9 ? "10px 10px 10px 4px" :  // In/Out right-pad
                 "10px 4px";
               return (
-                <div key={ci} onClick={() => ci !== 0 ? toggleSort(col.key) : null} style={{
-                  padding: headerPad, cursor: ci !== 0 ? "pointer" : "default",
+                <div key={ci} data-testid={`sort-${col.label}`} title={col.title} onClick={() => toggleSort(col.key)} style={{  /* patch_fe_sort_number: # sorts too */
+                  padding: headerPad, cursor: "pointer",
                   userSelect: "none" as const, whiteSpace: "nowrap" as const,
                   fontWeight: 600, fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".03em",
-                  color: sortKey === col.key && ci !== 0 ? S.blue : S.textFaint,
+                  color: sortKey === col.key ? S.blue : S.textFaint,
                   textAlign: align as any,
                 }}>
                   {col.label}
-                  {sortKey === col.key && ci !== 0 && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
+                  {sortKey === col.key && <span style={{ marginLeft: 2, fontSize: 9 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
                 </div>
               );
             })}
@@ -396,6 +400,10 @@ export default function ClaimsExplorer() {
                     {/* VS */}
                     <div style={{ display: "flex", justifyContent: "center", padding: "0 2px" }}>
                       <VSBar vs={c.verity_score} width={60} height={22} />
+                      {evidenceNote(c) && (  /* patch_fe_evidence_marker */
+                        <span data-testid="vs-evidence" title={evidenceNote(c)!} aria-label={evidenceNote(c)!}
+                          style={{ marginLeft: 3, fontSize: 9, lineHeight: "22px", color: S.blue, cursor: "help" }}>◆</span>
+                      )}
                     </div>
                     {/* Stake */}
                     <div style={{ fontSize: 11, color: S.text, textAlign: "right", padding: "0 4px", fontWeight: 500 }}>
