@@ -121,7 +121,7 @@ export function InvitesList() {
     const link = inviteLink(window.location.origin, code, r.post_id);
     if (r.post_id == null) { await copy(link); return; }
     try {
-      const snap = await fetch(`${API}/claims/${r.post_id}/snapshot`).then((x) => x.ok ? x.json() : Promise.reject(new Error(`snapshot ${x.status}`)));
+      const snap = await fetch(`${API}/claims/${r.post_id}/snapshot?payoff=1`).then((x) => x.ok ? x.json() : Promise.reject(new Error(`snapshot ${x.status}`)));
       await copy(withInvite(snap.share_url, snap.share_text, code, r.amount_vsp).text);
     } catch { await copy(link); }
   };

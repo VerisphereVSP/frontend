@@ -27,6 +27,9 @@ describe("invites helpers", () => {
     const { url, text } = withInvite("https://app.verisphere.co/c/9", "“x”\n72 % of stake on Verisphere backs it. Agree? Support it. Disagree? Challenge it.\nhttps://app.verisphere.co/c/9", "VSP-AAAA-BBBB-CCCC", "2");
     expect(url).toBe("https://app.verisphere.co/c/9?code=VSP-AAAA-BBBB-CCCC");
     expect(text.split("\n")).toEqual(["“x”", "72 % of stake on Verisphere backs it. Agree? Support it. Disagree? Challenge it.", "I've put 2 VSP on the table for you — the link carries it.", url]);
+    // patch_fe_share_payoff: with the staking line in the text, the invitation still goes just above the link
+    const four = withInvite("https://app.verisphere.co/c/9", "“x” — 72 % of stake on Verisphere backs this claim.\nAgree? Support it. Disagree? Challenge it.\nYour stake on the winning side earns.\nhttps://app.verisphere.co/c/9", "VSP-AAAA-BBBB-CCCC", "2");
+    expect(four.text.split("\n").slice(-3)).toEqual(["Your stake on the winning side earns.", "I've put 2 VSP on the table for you — the link carries it.", four.url]);
     // older one-line text form: the line goes after the link
     expect(withInvite("https://x/c/9", "… Challenge it: https://x/c/9", "C", "1").text).toBe("… Challenge it: https://x/c/9?code=C I've put 1 VSP on the table for you — the link carries it.");
   });
@@ -237,7 +240,7 @@ describe("InvitesList", () => {  // patch_fe_invites_2
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (String(url).includes("/invites?sponsor=")) return { ok: true, json: async () => rowsJson } as any;
       if (String(url).endsWith("/invites/config")) return { ok: true, json: async () => CONFIG } as any;
-      if (String(url).endsWith("/claims/142/snapshot")) return { ok: true, json: async () => ({ share_url: "https://app.verisphere.co/c/142", share_text: "“x”\nAgree? Support it. Disagree? Challenge it.\nhttps://app.verisphere.co/c/142" }) } as any;
+      if (String(url).endsWith("/claims/142/snapshot?payoff=1")) return { ok: true, json: async () => ({ share_url: "https://app.verisphere.co/c/142", share_text: "“x”\nAgree? Support it. Disagree? Challenge it.\nhttps://app.verisphere.co/c/142" }) } as any;
       return { ok: false, status: 404, json: async () => ({}) } as any;
     }));
     // this browser knows the code of h2 only
