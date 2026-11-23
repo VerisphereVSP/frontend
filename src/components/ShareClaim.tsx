@@ -116,7 +116,7 @@ export async function shareSnapshot(snap: Snapshot): Promise<"shared" | "cancell
 }
 
 export async function fetchSnapshot(postId: number): Promise<Snapshot> {
-  const r = await fetch(`${API}/claims/${postId}/snapshot`);
+  const r = await fetch(`${API}/claims/${postId}/snapshot?payoff=1`);  // patch_fe_share_payoff: the app's shares carry the staking line
   if (!r.ok) throw new Error(`snapshot ${r.status}`);
   return r.json();
 }
@@ -169,6 +169,8 @@ const ShareIcon = ({ size = 14 }: { size?: number }) => (
 export default function ShareClaim({ postId, variant = "button", onActivate }: { postId: number; variant?: "button" | "icon" | "link"; onActivate?: () => void }) {
   const [open, setOpen] = useState(false);
   const [snap, setSnap] = useState<Snapshot | null>(null);
+  const snapRef = useRef<Snapshot | null>(null);
+  snapRef.current = snap;
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);  // which button just succeeded (shows "Copied ✓")
@@ -191,14 +193,16 @@ export default function ShareClaim({ postId, variant = "button", onActivate }: {
     return () => window.removeEventListener("verisphere:share-open", onAsk);
   }, [postId, variant]);
 
+  // patch_fe_card_fresh: read the snapshot every time the menu opens, not once per page — after a stake the score,
+  // the text and the card's address have all changed. The previous one stays on screen until the new one arrives.
   useEffect(() => {
-    if (!open || snap) return;
+    if (!open) return;
     let alive = true;
     fetchSnapshot(postId)
-      .then((s) => { if (alive) setSnap(s); })
-      .catch(() => { if (alive) setError("Snapshot unavailable right now."); });
+      .then((s) => { if (alive) { setSnap(s); setError(null); } })
+      .catch(() => { if (alive && !snapRef.current) setError("Snapshot unavailable right now."); });
     return () => { alive = false; };
-  }, [open, postId, snap]);
+  }, [open, postId]);
 
   useEffect(() => {
     if (!open) return;

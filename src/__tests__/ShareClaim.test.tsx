@@ -32,7 +32,7 @@ describe("ShareClaim", () => {
   beforeEach(() => {
     written = []; items = [];
     fetchMock = vi.fn(async (url: string) => {
-      if (String(url).endsWith("/claims/142/snapshot")) return { ok: true, json: async () => SNAP } as any;
+      if (String(url).endsWith("/claims/142/snapshot?payoff=1")) return { ok: true, json: async () => SNAP } as any;
       if (String(url).endsWith("/claims/142/card.png")) return { ok: true, blob: async () => PNG } as any;
       return { ok: false, status: 404, json: async () => ({}) } as any;
     });
@@ -53,6 +53,21 @@ describe("ShareClaim", () => {
     expect((screen.getByLabelText("Share link") as HTMLInputElement).value).toBe(SNAP.share_url);
     expect(document.body.textContent).not.toContain("Verisnap");  // patch_snapshot_naming
     expect(screen.getByTestId("share-claim").getAttribute("title")).not.toContain("Verisnap");
+  });
+
+  it("reads the snapshot again each time the menu opens, so a card copied after a stake is the current one", async () => {  // patch_fe_card_fresh
+    let n = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).endsWith("/claims/142/snapshot?payoff=1")) { n += 1; return { ok: true, json: async () => ({ ...SNAP, card_url: `${SNAP.card_url}?v=state${n}` }) } as any; }
+      return { ok: false, status: 404, json: async () => ({}) } as any;
+    });
+    render(<ShareClaim postId={142} />);
+    await act(async () => { screen.getByTestId("share-claim").click(); });
+    await waitFor(() => expect((screen.getByAltText(/Verisphere Snapshot of claim #142/) as HTMLImageElement).src).toContain("v=state1"));
+    await act(async () => { screen.getByTestId("share-claim").click(); });   // close
+    await act(async () => { screen.getByTestId("share-claim").click(); });   // open again
+    await waitFor(() => expect((screen.getByAltText(/Verisphere Snapshot of claim #142/) as HTMLImageElement).src).toContain("v=state2"));
+    expect(n).toBe(2);
   });
 
   it("copies the share link and the text form", async () => {
