@@ -44,6 +44,16 @@ input, select, textarea { max-width: 100%; box-sizing: border-box; }
   .pool-market-row { flex-wrap: wrap; row-gap: 8px; max-width: 100%; }
 }
 
+/* patch_fe_phone_tables: Claims, Positions and Transactions fill a fixed-height shell and scroll their rows inside it.
+   On a phone, or in a short window, the header and the figures above the table used up that height and the rows got
+   none: the table showed its heading and nothing under it. There the page scrolls as a whole and each table takes
+   its natural height. */
+@media (max-width: 768px), (max-height: 640px) {
+  .app-shell { height: auto; min-height: 100vh; min-height: 100dvh; }
+  .app-main { overflow-y: visible !important; }
+  .app-fill { display: block !important; flex: none !important; overflow: visible !important; min-height: 0 !important; }
+}
+
 /* Page layout (sticky footer) */
 #root {
   min-height: 100vh;

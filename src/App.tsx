@@ -738,7 +738,7 @@ export default function App() {
 
       {/* Content */}
       <main
-        className="watermark-bg"
+        className="watermark-bg app-main"
         style={{
           flex: 1,
           overflowY: (showingArticle || view === "portfolio" || view === "claims" || view === "transactions")  /* patch_bundle04_5_p3_tx_layout */ ? "hidden" : "auto",
@@ -749,7 +749,7 @@ export default function App() {
         }}
       >
         <div
-          className="container"
+          className={(showingArticle || view === "portfolio" || view === "claims" || view === "transactions") ? "container app-fill" : "container"}
           style={{
             padding: showingArticle ? 0 : (view === "explore" && !topic ? 0 : "16px"),
             ...((showingArticle || view === "portfolio" || view === "claims" || view === "transactions") ? { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" } : {}),
@@ -769,12 +769,12 @@ export default function App() {
           )}
 
           {/* Claims explorer */}
-          {view === "claims" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><ClaimsExplorer /></div>}
-          {view === "transactions" && <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><TransactionsView /></div>}  {/* patch_bundle04_5_p3_tx_render */}
+          {view === "claims" && <div className="app-fill" style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><ClaimsExplorer /></div>}
+          {view === "transactions" && <div className="app-fill" style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}><TransactionsView /></div>}  {/* patch_bundle04_5_p3_tx_render */}
           {view === "activity" && <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}><ActivityView /></div>}  {/* patch_fe_activity */}
 
           {/* Portfolio */}
-          {view === "portfolio" && (<div style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}>
+          {view === "portfolio" && (<div className="app-fill" style={{ flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0, overflow: "hidden" }}>
             <Portfolio />  {/* patch_bundle09_p1_page_titles_age_sort */}
           </div>)}
         </div>
