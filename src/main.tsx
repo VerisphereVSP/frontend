@@ -7,6 +7,9 @@ import { NotificationsProvider } from "./notifications";
 import { BrowserRouter } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles.css";
+import { trackVisit } from "./funnel";  // patch_fe_visits
+
+trackVisit();  // one anonymous count per browser session
 
 import "@rainbow-me/rainbowkit/styles.css";
 

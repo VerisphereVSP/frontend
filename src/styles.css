@@ -71,7 +71,7 @@ input, select, textarea { max-width: 100%; box-sizing: border-box; }
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url("/verisphere-logo.png");
+  background-image: url("/verisphere-mark-outline.png"); /* patch_fe_new_logo: flat silhouette of the mark */
   background-repeat: no-repeat;
   background-position: center;
   background-size: 900px 900px;
