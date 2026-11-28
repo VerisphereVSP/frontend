@@ -589,7 +589,11 @@ export default function App() {
           <div className="brand-nav">{/* patch_fe_mobile_shell: wraps on phones instead of widening the viewport */}
             {/* patch_fe_brand_link: the wordmark is the only way back to the landing page (verisphere.co) from the app */}
             <h2 className="logo" style={{ margin: 0 }}>
-              <a href="https://verisphere.co" data-testid="brand-link" title="Verisphere home" style={{ color: "inherit", textDecoration: "none" }}>Verisphere</a>
+              <a href="https://verisphere.co" data-testid="brand-link" title="Verisphere home" style={{ color: "inherit", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                {/* patch_fe_new_logo: the mark sits beside the wordmark */}
+                <img src="/verisphere-mark.png" width={28} height={28} alt="" data-testid="brand-mark" style={{ display: "block", borderRadius: 6 }} />
+                Verisphere
+              </a>
             </h2>
             <nav className="top-nav">
               {navBtn("Explore", "explore")}
